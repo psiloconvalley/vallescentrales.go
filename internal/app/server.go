@@ -1,5 +1,6 @@
 // internal/app/server.go
-// Router wiring, security middleware, and graceful shutdown.
+// Router wiring, security middleware, auth-aware route groups,
+// and graceful shutdown.
 
 package app
 
@@ -14,13 +15,15 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	appmiddleware "vallescentrales/internal/middleware"
 )
 
 const (
 	// maxRequestBodyBytes limits request body size — prevents DoS via large payloads.
-	// Photo uploads use multipart with their own limit — this covers everything else.
+	// Photo uploads use multipart with their own limit later.
 	maxRequestBodyBytes = 1 << 20 // 1MB
 )
 
@@ -29,9 +32,14 @@ type Server struct {
 	db     *pgxpool.Pool
 	router *chi.Mux
 	logger *slog.Logger
+	authMW *appmiddleware.AuthMiddleware
 }
 
-func NewServer(cfg *Config, db *pgxpool.Pool) *Server {
+func NewServer(cfg *Config, db *pgxpool.Pool, authMW *appmiddleware.AuthMiddleware) (*Server, error) {
+	if authMW == nil {
+		return nil, fmt.Errorf("server: auth middleware is required")
+	}
+
 	var handler slog.Handler
 	if cfg.IsProduction() {
 		handler = slog.NewJSONHandler(os.Stdout, nil)
@@ -49,20 +57,21 @@ func NewServer(cfg *Config, db *pgxpool.Pool) *Server {
 		db:     db,
 		router: chi.NewRouter(),
 		logger: logger,
+		authMW: authMW,
 	}
 
 	s.mountMiddleware()
 	s.mountRoutes()
 
-	return s
+	return s, nil
 }
 
 func (s *Server) mountMiddleware() {
-	s.router.Use(middleware.RequestID)
-	s.router.Use(middleware.RealIP)
-	s.router.Use(middleware.Recoverer)
+	s.router.Use(chimiddleware.RequestID)
+	s.router.Use(chimiddleware.RealIP)
+	s.router.Use(chimiddleware.Recoverer)
 	s.router.Use(s.requestLogger)
-	s.router.Use(middleware.Timeout(30 * time.Second))
+	s.router.Use(chimiddleware.Timeout(30 * time.Second))
 	s.router.Use(s.securityHeaders)
 	s.router.Use(s.limitRequestBody)
 }
@@ -71,33 +80,37 @@ func (s *Server) mountRoutes() {
 	// Health check — Railway and load balancers hit this
 	s.router.Get("/health", s.handleHealth)
 
-	// Static files
+	// Static files — no user loading needed
 	s.router.Handle("/static/*", http.StripPrefix("/static/",
 		http.FileServer(http.Dir("static"))))
 
-	// PUBLIC routes — no auth required (ADR-002)
-	s.router.Get("/", s.handleHome)
-	s.router.Get("/listings", s.handleListListings)
-	s.router.Get("/listings/{slug}", s.handleGetListing)
-
-	// AUTH routes — public (ADR-002)
-	s.router.Get("/auth/login", s.handleLoginPage)
-	s.router.Post("/auth/login", s.handleLogin)
-	s.router.Get("/auth/register", s.handleRegisterPage)
-	s.router.Post("/auth/register", s.handleRegister)
-	s.router.Post("/auth/logout", s.handleLogout)
-
-	// PROTECTED routes — RequireAuth middleware added in Session 008
-	// Grouped so middleware can be applied to the whole subrouter at once
+	// Application routes — LoadUser makes current user available when present
 	s.router.Group(func(r chi.Router) {
-		// TODO Session 008: r.Use(s.requireAuth)
-		r.Get("/dashboard", s.handleDashboard)
-		r.Get("/listings/new", s.handleNewListingPage)
-		r.Post("/listings/new", s.handleCreateListing)
-		r.Get("/listings/{slug}/edit", s.handleEditListingPage)
-		r.Post("/listings/{slug}/edit", s.handleEditListing)
-		r.Post("/listings/{slug}/delete", s.handleDeleteListing)
-		r.Post("/listings/{slug}/photos", s.handleUploadPhotos)
+		r.Use(s.authMW.LoadUser)
+
+		// PUBLIC routes — no auth required (ADR-002)
+		r.Get("/", s.handleHome)
+		r.Get("/listings", s.handleListListings)
+		r.Get("/listings/{slug}", s.handleGetListing)
+
+		// AUTH routes — still public, but user state is available if logged in
+		r.Get("/auth/login", s.handleLoginPage)
+		r.Post("/auth/login", s.handleLogin)
+		r.Get("/auth/register", s.handleRegisterPage)
+		r.Post("/auth/register", s.handleRegister)
+		r.Post("/auth/logout", s.handleLogout)
+
+		// PROTECTED routes — session required
+		r.Group(func(r chi.Router) {
+			r.Use(s.authMW.RequireAuth)
+			r.Get("/dashboard", s.handleDashboard)
+			r.Get("/listings/new", s.handleNewListingPage)
+			r.Post("/listings/new", s.handleCreateListing)
+			r.Get("/listings/{slug}/edit", s.handleEditListingPage)
+			r.Post("/listings/{slug}/edit", s.handleEditListing)
+			r.Post("/listings/{slug}/delete", s.handleDeleteListing)
+			r.Post("/listings/{slug}/photos", s.handleUploadPhotos)
+		})
 	})
 }
 
@@ -132,7 +145,6 @@ func (s *Server) Start() error {
 		s.logger.Info("shutdown signal received", "signal", sig)
 	}
 
-	// Graceful shutdown — drain in-flight requests up to 30 seconds
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -148,14 +160,14 @@ func (s *Server) Start() error {
 func (s *Server) requestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+		ww := chimiddleware.NewWrapResponseWriter(w, r.ProtoMajor)
 		next.ServeHTTP(ww, r)
 		s.logger.Info("request",
 			"method", r.Method,
 			"path", r.URL.Path,
 			"status", ww.Status(),
 			"ms", time.Since(start).Milliseconds(),
-			"id", middleware.GetReqID(r.Context()),
+			"id", chimiddleware.GetReqID(r.Context()),
 		)
 	})
 }
@@ -163,18 +175,15 @@ func (s *Server) requestLogger(next http.Handler) http.Handler {
 // securityHeaders sets defensive HTTP headers on every response.
 func (s *Server) securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Prevent MIME sniffing
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		// Prevent clickjacking
 		w.Header().Set("X-Frame-Options", "DENY")
-		// Limit referrer information
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
-		// Disable browser features we do not use
 		w.Header().Set("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
-		// Force HTTPS in production
+
 		if s.cfg.IsProduction() {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
+
 		next.ServeHTTP(w, r)
 	})
 }
