@@ -1,0 +1,26 @@
+{{define "content"}}
+<section class="hero">
+    <div class="container">
+        <h1>Tierra y Casas en los<br>Valles Centrales</h1>
+        <p>La plataforma premier de bienes raíces para la región más hermosa de Oaxaca</p>
+        <a href="/listings" class="btn btn-primary btn-lg">Ver Propiedades →</a>
+    </div>
+</section>
+
+<section class="container mt-4">
+    {{if .Listings}}
+    <h2 class="mb-3">Propiedades Destacadas</h2>
+    <div class="listing-grid">
+        {{range .Listings}}
+            {{template "listing_card" .}}
+        {{end}}
+    </div>
+    {{else}}
+    <div class="empty-state">
+        <h2>Próximamente</h2>
+        <p>Las primeras propiedades de los Valles Centrales estarán aquí pronto.</p>
+        <a href="/auth/register" class="btn btn-primary btn-lg mt-3">Publica Tu Propiedad →</a>
+    </div>
+    {{end}}
+</section>
+{{end}}

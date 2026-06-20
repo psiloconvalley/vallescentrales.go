@@ -1,6 +1,6 @@
 // cmd/vallescentrales/main.go
 // Entry point only. No business logic here.
-// Wires config → database → repos → auth → middleware → handlers → server.
+// Wires config → database → repos → auth → middleware → handlers → templates → server.
 
 package main
 
@@ -19,14 +19,14 @@ import (
 func main() {
 	ctx := context.Background()
 
-	// 1. Load and validate config — exits if required vars missing
+	// 1. Load and validate config
 	cfg, err := app.LoadConfig()
 	if err != nil {
 		slog.Error("failed to load config", "error", err)
 		os.Exit(1)
 	}
 
-	// 2. Connect to database — fails fast if unreachable
+	// 2. Connect to database
 	db, err := app.NewDBPool(ctx, cfg)
 	if err != nil {
 		slog.Error("failed to connect to database", "error", err)
@@ -45,12 +45,19 @@ func main() {
 	// 5. Build middleware
 	authMW := middleware.NewAuthMiddleware(sessionMgr, userRepo)
 
-	// 6. Build handlers
+	// 6. Parse templates
+	tmpl, err := app.NewTemplateRenderer()
+	if err != nil {
+		slog.Error("failed to parse templates", "error", err)
+		os.Exit(1)
+	}
+
+	// 7. Build handlers
 	authH    := handlers.NewAuthHandler(userRepo, sessionMgr)
 	listingH := handlers.NewListingHandler(listingRepo)
 
-	// 7. Build server and block until shutdown signal
-	server, err := app.NewServer(cfg, db, authMW, authH, listingH)
+	// 8. Build server and block until shutdown signal
+	server, err := app.NewServer(cfg, db, authMW, authH, listingH, tmpl)
 	if err != nil {
 		slog.Error("failed to build server", "error", err)
 		os.Exit(1)

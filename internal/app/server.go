@@ -23,30 +23,29 @@ import (
 )
 
 const (
-	// maxRequestBodyBytes limits request body size — prevents DoS via large payloads.
-	// Photo uploads use multipart with their own limit later.
 	maxRequestBodyBytes = 1 << 20 // 1MB
 )
 
 // Server holds all dependencies needed to serve HTTP requests.
 type Server struct {
-	cfg       *Config
-	db        *pgxpool.Pool
-	router    *chi.Mux
-	logger    *slog.Logger
-	authMW    *appmiddleware.AuthMiddleware
-	authH     *handlers.AuthHandler
-	listingH  *handlers.ListingHandler
+	cfg      *Config
+	db       *pgxpool.Pool
+	router   *chi.Mux
+	logger   *slog.Logger
+	tmpl     *TemplateRenderer
+	authMW   *appmiddleware.AuthMiddleware
+	authH    *handlers.AuthHandler
+	listingH *handlers.ListingHandler
 }
 
 // NewServer constructs and wires the server.
-// Returns an error if any required dependency is nil.
 func NewServer(
 	cfg *Config,
 	db *pgxpool.Pool,
 	authMW *appmiddleware.AuthMiddleware,
 	authH *handlers.AuthHandler,
 	listingH *handlers.ListingHandler,
+	tmpl *TemplateRenderer,
 ) (*Server, error) {
 	if authMW == nil {
 		return nil, fmt.Errorf("server: auth middleware is required")
@@ -56,6 +55,9 @@ func NewServer(
 	}
 	if listingH == nil {
 		return nil, fmt.Errorf("server: listing handler is required")
+	}
+	if tmpl == nil {
+		return nil, fmt.Errorf("server: template renderer is required")
 	}
 
 	var handler slog.Handler
@@ -75,6 +77,7 @@ func NewServer(
 		db:       db,
 		router:   chi.NewRouter(),
 		logger:   logger,
+		tmpl:     tmpl,
 		authMW:   authMW,
 		authH:    authH,
 		listingH: listingH,
@@ -97,30 +100,30 @@ func (s *Server) mountMiddleware() {
 }
 
 func (s *Server) mountRoutes() {
-	// Health check — Railway and load balancers hit this
+	// Health check
 	s.router.Get("/health", s.handleHealth)
 
-	// Static files — no user loading needed
+	// Static files
 	s.router.Handle("/static/*", http.StripPrefix("/static/",
 		http.FileServer(http.Dir("static"))))
 
-	// Application routes — LoadUser makes current user available when present
+	// Application routes — LoadUser makes current user available
 	s.router.Group(func(r chi.Router) {
 		r.Use(s.authMW.LoadUser)
 
-		// PUBLIC routes — no auth required (ADR-002)
-		r.Get("/", s.listingH.HandleHome)
+		// PUBLIC
+		r.Get("/", s.handleHome)
 		r.Get("/listings", s.listingH.HandleListListings)
 		r.Get("/listings/{slug}", s.listingH.HandleGetListing)
 
-		// AUTH routes — public, user state available if logged in
+		// AUTH
 		r.Get("/auth/login", s.authH.HandleLoginPage)
 		r.Post("/auth/login", s.authH.HandleLogin)
 		r.Get("/auth/register", s.authH.HandleRegisterPage)
 		r.Post("/auth/register", s.authH.HandleRegister)
 		r.Post("/auth/logout", s.authH.HandleLogout)
 
-		// PROTECTED routes — session required (ADR-002)
+		// PROTECTED
 		r.Group(func(r chi.Router) {
 			r.Use(s.authMW.RequireAuth)
 			r.Get("/dashboard", s.listingH.HandleDashboard)
@@ -134,25 +137,21 @@ func (s *Server) mountRoutes() {
 	})
 }
 
-// handleEditListingPage — stub, Session 010
-func (s *Server) handleEditListingPage(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusNotImplemented)
-	_, _ = w.Write([]byte(`{"error":"not implemented"}`))
-}
+// handleHome renders the homepage with HTML template.
+func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
+	user := appmiddleware.UserFromContext(r.Context())
 
-// handleEditListing — stub, Session 010
-func (s *Server) handleEditListing(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusNotImplemented)
-	_, _ = w.Write([]byte(`{"error":"not implemented"}`))
-}
+	data := map[string]any{
+		"Meta": map[string]string{
+			"Title":       "",
+			"Description": "Tierra y casas en los Valles Centrales de Oaxaca",
+		},
+		"User":     user,
+		"Listings": nil,
+		"Flash":    nil,
+	}
 
-// handleUploadPhotos — stub, Session 012
-func (s *Server) handleUploadPhotos(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusNotImplemented)
-	_, _ = w.Write([]byte(`{"error":"not implemented"}`))
+	s.tmpl.Render(w, r, "home.tmpl", data)
 }
 
 // handleHealth returns 200 if the server and DB are reachable.
@@ -167,6 +166,25 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = fmt.Fprintf(w, `{"status":"ok","env":%q}`, s.cfg.AppEnv)
+}
+
+// Stubs
+func (s *Server) handleEditListingPage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNotImplemented)
+	_, _ = w.Write([]byte(`{"error":"not implemented"}`))
+}
+
+func (s *Server) handleEditListing(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNotImplemented)
+	_, _ = w.Write([]byte(`{"error":"not implemented"}`))
+}
+
+func (s *Server) handleUploadPhotos(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNotImplemented)
+	_, _ = w.Write([]byte(`{"error":"not implemented"}`))
 }
 
 // Start runs the server and blocks until a shutdown signal is received.
@@ -211,7 +229,7 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// requestLogger logs every request with method, path, status, and duration.
+// requestLogger logs every request.
 func (s *Server) requestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -227,7 +245,7 @@ func (s *Server) requestLogger(next http.Handler) http.Handler {
 	})
 }
 
-// securityHeaders sets defensive HTTP headers on every response.
+// securityHeaders sets defensive HTTP headers.
 func (s *Server) securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -241,7 +259,7 @@ func (s *Server) securityHeaders(next http.Handler) http.Handler {
 	})
 }
 
-// limitRequestBody caps the request body size to prevent DoS attacks.
+// limitRequestBody caps request body size.
 func (s *Server) limitRequestBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)

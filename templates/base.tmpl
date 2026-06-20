@@ -1,0 +1,42 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{{if .Meta.Description}}{{.Meta.Description}}{{else}}Tierra y casas en los Valles Centrales de Oaxaca{{end}}">
+
+    <title>{{if .Meta.Title}}{{.Meta.Title}} — {{end}}Valles Centrales</title>
+
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/css/fonts.css">
+    <link rel="stylesheet" href="/static/css/reset.css">
+    <link rel="stylesheet" href="/static/css/tokens.css">
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <link rel="stylesheet" href="/static/css/pages.css">
+    <link rel="stylesheet" href="/static/css/utilities.css">
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏔</text></svg>">
+</head>
+<body>
+
+    {{template "nav" .}}
+
+    {{if .Flash}}
+    <div class="container">
+        {{template "flash" .}}
+    </div>
+    {{end}}
+
+    <main class="main-content">
+        {{template "content" .}}
+    </main>
+
+    {{template "footer" .}}
+
+</body>
+</html>
+{{end}}

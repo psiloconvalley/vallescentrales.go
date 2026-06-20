@@ -1,0 +1,27 @@
+{{define "listing_card"}}
+<article class="listing-card">
+    <a href="/listings/{{.Slug}}">
+        {{if .Media}}
+            <img class="listing-card-image"
+                 src="{{(index .Media 0).URL}}"
+                 alt="{{.Title}}"
+                 loading="lazy">
+        {{else}}
+            <div class="listing-card-image"></div>
+        {{end}}
+    </a>
+    <div class="listing-card-body">
+        <span class="badge badge-{{.PropertyType}}">{{.PropertyType}}</span>
+        <div class="listing-card-price">
+            ${{printf "%.0f" .PriceMXN}} MXN
+        </div>
+        <h3 class="listing-card-title">
+            <a href="/listings/{{.Slug}}">{{.Title}}</a>
+        </h3>
+        <p class="listing-card-location">{{.Municipality}}{{if .Community}}, {{.Community}}{{end}}</p>
+        {{if .AreaM2}}
+        <p class="text-sm text-muted mt-1">{{printf "%.0f" .AreaM2}} m²</p>
+        {{end}}
+    </div>
+</article>
+{{end}}
