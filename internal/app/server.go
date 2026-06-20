@@ -18,6 +18,7 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"vallescentrales/internal/handlers"
 	appmiddleware "vallescentrales/internal/middleware"
 )
 
@@ -27,17 +28,34 @@ const (
 	maxRequestBodyBytes = 1 << 20 // 1MB
 )
 
+// Server holds all dependencies needed to serve HTTP requests.
 type Server struct {
-	cfg    *Config
-	db     *pgxpool.Pool
-	router *chi.Mux
-	logger *slog.Logger
-	authMW *appmiddleware.AuthMiddleware
+	cfg       *Config
+	db        *pgxpool.Pool
+	router    *chi.Mux
+	logger    *slog.Logger
+	authMW    *appmiddleware.AuthMiddleware
+	authH     *handlers.AuthHandler
+	listingH  *handlers.ListingHandler
 }
 
-func NewServer(cfg *Config, db *pgxpool.Pool, authMW *appmiddleware.AuthMiddleware) (*Server, error) {
+// NewServer constructs and wires the server.
+// Returns an error if any required dependency is nil.
+func NewServer(
+	cfg *Config,
+	db *pgxpool.Pool,
+	authMW *appmiddleware.AuthMiddleware,
+	authH *handlers.AuthHandler,
+	listingH *handlers.ListingHandler,
+) (*Server, error) {
 	if authMW == nil {
 		return nil, fmt.Errorf("server: auth middleware is required")
+	}
+	if authH == nil {
+		return nil, fmt.Errorf("server: auth handler is required")
+	}
+	if listingH == nil {
+		return nil, fmt.Errorf("server: listing handler is required")
 	}
 
 	var handler slog.Handler
@@ -53,11 +71,13 @@ func NewServer(cfg *Config, db *pgxpool.Pool, authMW *appmiddleware.AuthMiddlewa
 	slog.SetDefault(logger)
 
 	s := &Server{
-		cfg:    cfg,
-		db:     db,
-		router: chi.NewRouter(),
-		logger: logger,
-		authMW: authMW,
+		cfg:      cfg,
+		db:       db,
+		router:   chi.NewRouter(),
+		logger:   logger,
+		authMW:   authMW,
+		authH:    authH,
+		listingH: listingH,
 	}
 
 	s.mountMiddleware()
@@ -89,29 +109,64 @@ func (s *Server) mountRoutes() {
 		r.Use(s.authMW.LoadUser)
 
 		// PUBLIC routes — no auth required (ADR-002)
-		r.Get("/", s.handleHome)
-		r.Get("/listings", s.handleListListings)
-		r.Get("/listings/{slug}", s.handleGetListing)
+		r.Get("/", s.listingH.HandleHome)
+		r.Get("/listings", s.listingH.HandleListListings)
+		r.Get("/listings/{slug}", s.listingH.HandleGetListing)
 
-		// AUTH routes — still public, but user state is available if logged in
-		r.Get("/auth/login", s.handleLoginPage)
-		r.Post("/auth/login", s.handleLogin)
-		r.Get("/auth/register", s.handleRegisterPage)
-		r.Post("/auth/register", s.handleRegister)
-		r.Post("/auth/logout", s.handleLogout)
+		// AUTH routes — public, user state available if logged in
+		r.Get("/auth/login", s.authH.HandleLoginPage)
+		r.Post("/auth/login", s.authH.HandleLogin)
+		r.Get("/auth/register", s.authH.HandleRegisterPage)
+		r.Post("/auth/register", s.authH.HandleRegister)
+		r.Post("/auth/logout", s.authH.HandleLogout)
 
-		// PROTECTED routes — session required
+		// PROTECTED routes — session required (ADR-002)
 		r.Group(func(r chi.Router) {
 			r.Use(s.authMW.RequireAuth)
-			r.Get("/dashboard", s.handleDashboard)
-			r.Get("/listings/new", s.handleNewListingPage)
-			r.Post("/listings/new", s.handleCreateListing)
+			r.Get("/dashboard", s.listingH.HandleDashboard)
+			r.Get("/listings/new", s.listingH.HandleNewListingPage)
+			r.Post("/listings/new", s.listingH.HandleCreateListing)
 			r.Get("/listings/{slug}/edit", s.handleEditListingPage)
 			r.Post("/listings/{slug}/edit", s.handleEditListing)
-			r.Post("/listings/{slug}/delete", s.handleDeleteListing)
+			r.Post("/listings/{slug}/delete", s.listingH.HandleDeleteListing)
 			r.Post("/listings/{slug}/photos", s.handleUploadPhotos)
 		})
 	})
+}
+
+// handleEditListingPage — stub, Session 010
+func (s *Server) handleEditListingPage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNotImplemented)
+	_, _ = w.Write([]byte(`{"error":"not implemented"}`))
+}
+
+// handleEditListing — stub, Session 010
+func (s *Server) handleEditListing(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNotImplemented)
+	_, _ = w.Write([]byte(`{"error":"not implemented"}`))
+}
+
+// handleUploadPhotos — stub, Session 012
+func (s *Server) handleUploadPhotos(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNotImplemented)
+	_, _ = w.Write([]byte(`{"error":"not implemented"}`))
+}
+
+// handleHealth returns 200 if the server and DB are reachable.
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	if err := s.db.Ping(r.Context()); err != nil {
+		s.logger.Error("health check failed", "error", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte(`{"error":"database unavailable"}`))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = fmt.Fprintf(w, `{"status":"ok","env":%q}`, s.cfg.AppEnv)
 }
 
 // Start runs the server and blocks until a shutdown signal is received.
@@ -179,17 +234,14 @@ func (s *Server) securityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		w.Header().Set("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
-
 		if s.cfg.IsProduction() {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
-
 		next.ServeHTTP(w, r)
 	})
 }
 
 // limitRequestBody caps the request body size to prevent DoS attacks.
-// Photo upload routes handle their own limits via multipart parsing.
 func (s *Server) limitRequestBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)

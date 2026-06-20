@@ -68,3 +68,8 @@ func (u *User) ToSafe() SafeUser {
 func (u *User) CanManageListings() bool {
 	return u.Role == RoleAdmin || u.Role == RoleAgent || u.Role == RoleOwner
 }
+
+// IsAdmin returns true if the user has the admin role.
+func (u *User) IsAdmin() bool {
+	return u.Role == RoleAdmin
+}

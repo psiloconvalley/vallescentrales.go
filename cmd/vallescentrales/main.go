@@ -1,6 +1,6 @@
 // cmd/vallescentrales/main.go
 // Entry point only. No business logic here.
-// Wires config → database → repos → auth → middleware → server.
+// Wires config → database → repos → auth → middleware → handlers → server.
 
 package main
 
@@ -11,6 +11,7 @@ import (
 
 	"vallescentrales/internal/app"
 	"vallescentrales/internal/auth"
+	"vallescentrales/internal/handlers"
 	"vallescentrales/internal/middleware"
 	"vallescentrales/internal/repo"
 )
@@ -36,6 +37,7 @@ func main() {
 	// 3. Build repo layer
 	userRepo    := repo.NewUserRepo(db)
 	sessionRepo := repo.NewSessionRepo(db)
+	listingRepo := repo.NewListingRepo(db)
 
 	// 4. Build auth layer
 	sessionMgr := auth.NewSessionManager(sessionRepo, cfg.IsProduction())
@@ -43,8 +45,12 @@ func main() {
 	// 5. Build middleware
 	authMW := middleware.NewAuthMiddleware(sessionMgr, userRepo)
 
-	// 6. Build server and block until shutdown signal
-	server, err := app.NewServer(cfg, db, authMW)
+	// 6. Build handlers
+	authH    := handlers.NewAuthHandler(userRepo, sessionMgr)
+	listingH := handlers.NewListingHandler(listingRepo)
+
+	// 7. Build server and block until shutdown signal
+	server, err := app.NewServer(cfg, db, authMW, authH, listingH)
 	if err != nil {
 		slog.Error("failed to build server", "error", err)
 		os.Exit(1)
