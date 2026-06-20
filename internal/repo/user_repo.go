@@ -29,12 +29,6 @@ func NewUserRepo(db *pgxpool.Pool) *UserRepo {
 	return &UserRepo{db: db}
 }
 
-// ErrNotFound is returned when a record does not exist.
-var ErrNotFound = errors.New("record not found")
-
-// ErrEmailTaken is returned when email already exists.
-var ErrEmailTaken = errors.New("email already taken")
-
 // Create inserts a new user and returns the created record.
 // password_hash must already be an Argon2id hash — never raw password.
 func (r *UserRepo) Create(ctx context.Context, email, passwordHash, fullName string) (*models.User, error) {

@@ -1,6 +1,6 @@
 // internal/app/handlers.go
-// Stub handlers — enough to compile and boot.
-// Real implementations come in Session 009.
+// Stub handlers — real implementations written in Session 009.
+// respond() and respondError() move to internal/handlers/ in Session 009.
 // Rule 42: handlers = HTTP only. No SQL. No business logic.
 
 package app
@@ -26,7 +26,7 @@ func respondError(w http.ResponseWriter, status int, message string) {
 	respond(w, status, map[string]string{"error": message})
 }
 
-// handleHealth — always returns 200 if DB is reachable.
+// handleHealth — returns 200 if server and DB are reachable.
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if err := s.db.Ping(r.Context()); err != nil {
 		s.logger.Error("health check failed", "error", err)
@@ -42,7 +42,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 
 // PUBLIC stubs
 func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
-	respond(w, http.StatusOK, map[string]string{"page": "home — coming in session 010"})
+	respond(w, http.StatusOK, map[string]string{"page": "home"})
 }
 
 func (s *Server) handleListListings(w http.ResponseWriter, r *http.Request) {
@@ -50,55 +50,55 @@ func (s *Server) handleListListings(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetListing(w http.ResponseWriter, r *http.Request) {
-	respond(w, http.StatusOK, map[string]string{"page": "listing detail — coming in session 010"})
+	respond(w, http.StatusOK, map[string]string{"page": "listing detail"})
 }
 
 // AUTH stubs
 func (s *Server) handleLoginPage(w http.ResponseWriter, r *http.Request) {
-	respond(w, http.StatusOK, map[string]string{"page": "login — coming in session 010"})
+	respond(w, http.StatusOK, map[string]string{"page": "login"})
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
-	respondError(w, http.StatusNotImplemented, "coming in session 007")
+	respondError(w, http.StatusNotImplemented, "not implemented")
 }
 
 func (s *Server) handleRegisterPage(w http.ResponseWriter, r *http.Request) {
-	respond(w, http.StatusOK, map[string]string{"page": "register — coming in session 010"})
+	respond(w, http.StatusOK, map[string]string{"page": "register"})
 }
 
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
-	respondError(w, http.StatusNotImplemented, "coming in session 007")
+	respondError(w, http.StatusNotImplemented, "not implemented")
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
-	respondError(w, http.StatusNotImplemented, "coming in session 007")
+	respondError(w, http.StatusNotImplemented, "not implemented")
 }
 
 // PROTECTED stubs
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
-	respondError(w, http.StatusNotImplemented, "coming in session 009")
+	respondError(w, http.StatusNotImplemented, "not implemented")
 }
 
 func (s *Server) handleNewListingPage(w http.ResponseWriter, r *http.Request) {
-	respondError(w, http.StatusNotImplemented, "coming in session 009")
+	respondError(w, http.StatusNotImplemented, "not implemented")
 }
 
 func (s *Server) handleCreateListing(w http.ResponseWriter, r *http.Request) {
-	respondError(w, http.StatusNotImplemented, "coming in session 009")
+	respondError(w, http.StatusNotImplemented, "not implemented")
 }
 
 func (s *Server) handleEditListingPage(w http.ResponseWriter, r *http.Request) {
-	respondError(w, http.StatusNotImplemented, "coming in session 009")
+	respondError(w, http.StatusNotImplemented, "not implemented")
 }
 
 func (s *Server) handleEditListing(w http.ResponseWriter, r *http.Request) {
-	respondError(w, http.StatusNotImplemented, "coming in session 009")
+	respondError(w, http.StatusNotImplemented, "not implemented")
 }
 
 func (s *Server) handleDeleteListing(w http.ResponseWriter, r *http.Request) {
-	respondError(w, http.StatusNotImplemented, "coming in session 009")
+	respondError(w, http.StatusNotImplemented, "not implemented")
 }
 
 func (s *Server) handleUploadPhotos(w http.ResponseWriter, r *http.Request) {
-	respondError(w, http.StatusNotImplemented, "coming in session 012")
+	respondError(w, http.StatusNotImplemented, "not implemented")
 }

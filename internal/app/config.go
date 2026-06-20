@@ -6,6 +6,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -32,23 +33,42 @@ type Config struct {
 // LoadConfig loads and validates all environment variables.
 // In development: reads from .env file.
 // In production: reads from Railway injected environment.
+// Returns an error if any required variable is missing.
+// The app must not start if this returns an error.
 func LoadConfig() (*Config, error) {
 	// .env is ignored in production — Railway injects vars directly
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		AppEnv:    getEnv("APP_ENV", "development"),
-		AppPort:   getEnv("APP_PORT", "8080"),
-		AppSecret: mustGetEnv("APP_SECRET"),
-
-		DatabaseURL: mustGetEnv("DATABASE_URL"),
-
-		R2AccountID: getEnv("R2_ACCOUNT_ID", ""),
-		R2AccessKey: getEnv("R2_ACCESS_KEY", ""),
-		R2SecretKey: getEnv("R2_SECRET_KEY", ""),
-		R2Bucket:    getEnv("R2_BUCKET", ""),
-		R2PublicURL: getEnv("R2_PUBLIC_URL", ""),
+		AppEnv:  getEnv("APP_ENV", "development"),
+		AppPort: getEnv("APP_PORT", "8080"),
 	}
+
+	// Validate required variables — fail fast with clear messages
+	var errs []error
+
+	if v, ok := requireEnv("APP_SECRET"); ok {
+		cfg.AppSecret = v
+	} else {
+		errs = append(errs, fmt.Errorf("APP_SECRET is required"))
+	}
+
+	if v, ok := requireEnv("DATABASE_URL"); ok {
+		cfg.DatabaseURL = v
+	} else {
+		errs = append(errs, fmt.Errorf("DATABASE_URL is required"))
+	}
+
+	if len(errs) > 0 {
+		return nil, errors.Join(errs...)
+	}
+
+	// Optional — storage configured later
+	cfg.R2AccountID = getEnv("R2_ACCOUNT_ID", "")
+	cfg.R2AccessKey = getEnv("R2_ACCESS_KEY", "")
+	cfg.R2SecretKey = getEnv("R2_SECRET_KEY", "")
+	cfg.R2Bucket    = getEnv("R2_BUCKET", "")
+	cfg.R2PublicURL = getEnv("R2_PUBLIC_URL", "")
 
 	return cfg, nil
 }
@@ -69,12 +89,11 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-// mustGetEnv panics at startup if a required variable is missing.
-// A misconfigured app must never start silently.
-func mustGetEnv(key string) string {
+// requireEnv returns the value and true if set, empty string and false if missing.
+func requireEnv(key string) (string, bool) {
 	val, ok := os.LookupEnv(key)
 	if !ok || val == "" {
-		panic(fmt.Sprintf("FATAL: required environment variable %q is not set", key))
+		return "", false
 	}
-	return val
+	return val, true
 }

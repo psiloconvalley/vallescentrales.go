@@ -1,6 +1,5 @@
 // internal/app/server.go
-// Router wiring and graceful shutdown.
-// Handlers are stubs — real implementations come in Session 009.
+// Router wiring, security middleware, and graceful shutdown.
 
 package app
 
@@ -17,6 +16,12 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+const (
+	// maxRequestBodyBytes limits request body size — prevents DoS via large payloads.
+	// Photo uploads use multipart with their own limit — this covers everything else.
+	maxRequestBodyBytes = 1 << 20 // 1MB
 )
 
 type Server struct {
@@ -58,10 +63,12 @@ func (s *Server) mountMiddleware() {
 	s.router.Use(middleware.Recoverer)
 	s.router.Use(s.requestLogger)
 	s.router.Use(middleware.Timeout(30 * time.Second))
+	s.router.Use(s.securityHeaders)
+	s.router.Use(s.limitRequestBody)
 }
 
 func (s *Server) mountRoutes() {
-	// Health check — load balancers and Railway hit this
+	// Health check — Railway and load balancers hit this
 	s.router.Get("/health", s.handleHealth)
 
 	// Static files
@@ -80,15 +87,18 @@ func (s *Server) mountRoutes() {
 	s.router.Post("/auth/register", s.handleRegister)
 	s.router.Post("/auth/logout", s.handleLogout)
 
-	// PROTECTED routes — session required (ADR-002)
-	// Middleware enforcement added in Session 008
-	s.router.Get("/dashboard", s.handleDashboard)
-	s.router.Get("/listings/new", s.handleNewListingPage)
-	s.router.Post("/listings/new", s.handleCreateListing)
-	s.router.Get("/listings/{slug}/edit", s.handleEditListingPage)
-	s.router.Post("/listings/{slug}/edit", s.handleEditListing)
-	s.router.Post("/listings/{slug}/delete", s.handleDeleteListing)
-	s.router.Post("/listings/{slug}/photos", s.handleUploadPhotos)
+	// PROTECTED routes — RequireAuth middleware added in Session 008
+	// Grouped so middleware can be applied to the whole subrouter at once
+	s.router.Group(func(r chi.Router) {
+		// TODO Session 008: r.Use(s.requireAuth)
+		r.Get("/dashboard", s.handleDashboard)
+		r.Get("/listings/new", s.handleNewListingPage)
+		r.Post("/listings/new", s.handleCreateListing)
+		r.Get("/listings/{slug}/edit", s.handleEditListingPage)
+		r.Post("/listings/{slug}/edit", s.handleEditListing)
+		r.Post("/listings/{slug}/delete", s.handleDeleteListing)
+		r.Post("/listings/{slug}/photos", s.handleUploadPhotos)
+	})
 }
 
 // Start runs the server and blocks until a shutdown signal is received.
@@ -122,7 +132,7 @@ func (s *Server) Start() error {
 		s.logger.Info("shutdown signal received", "signal", sig)
 	}
 
-	// Graceful shutdown — finish in-flight requests up to 30 seconds
+	// Graceful shutdown — drain in-flight requests up to 30 seconds
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -134,7 +144,7 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// requestLogger is structured middleware for every request.
+// requestLogger logs every request with method, path, status, and duration.
 func (s *Server) requestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -147,5 +157,33 @@ func (s *Server) requestLogger(next http.Handler) http.Handler {
 			"ms", time.Since(start).Milliseconds(),
 			"id", middleware.GetReqID(r.Context()),
 		)
+	})
+}
+
+// securityHeaders sets defensive HTTP headers on every response.
+func (s *Server) securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Prevent MIME sniffing
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		// Prevent clickjacking
+		w.Header().Set("X-Frame-Options", "DENY")
+		// Limit referrer information
+		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		// Disable browser features we do not use
+		w.Header().Set("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+		// Force HTTPS in production
+		if s.cfg.IsProduction() {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// limitRequestBody caps the request body size to prevent DoS attacks.
+// Photo upload routes handle their own limits via multipart parsing.
+func (s *Server) limitRequestBody(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+		next.ServeHTTP(w, r)
 	})
 }
