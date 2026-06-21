@@ -23,10 +23,9 @@ import (
 )
 
 const (
-	maxRequestBodyBytes = 1 << 20 // 1MB
+	maxRequestBodyBytes = 1 << 20
 )
 
-// Server holds all dependencies needed to serve HTTP requests.
 type Server struct {
 	cfg      *Config
 	db       *pgxpool.Pool
@@ -38,7 +37,6 @@ type Server struct {
 	listingH *handlers.ListingHandler
 }
 
-// NewServer constructs and wires the server.
 func NewServer(
 	cfg *Config,
 	db *pgxpool.Pool,
@@ -100,14 +98,11 @@ func (s *Server) mountMiddleware() {
 }
 
 func (s *Server) mountRoutes() {
-	// Health check
 	s.router.Get("/health", s.handleHealth)
 
-	// Static files
 	s.router.Handle("/static/*", http.StripPrefix("/static/",
 		http.FileServer(http.Dir("static"))))
 
-	// Application routes — LoadUser makes current user available
 	s.router.Group(func(r chi.Router) {
 		r.Use(s.authMW.LoadUser)
 
@@ -116,12 +111,16 @@ func (s *Server) mountRoutes() {
 		r.Get("/listings", s.listingH.HandleListListings)
 		r.Get("/listings/{slug}", s.listingH.HandleGetListing)
 
-		// AUTH
+		// AUTH — email
 		r.Get("/auth/login", s.authH.HandleLoginPage)
 		r.Post("/auth/login", s.authH.HandleLogin)
 		r.Get("/auth/register", s.authH.HandleRegisterPage)
 		r.Post("/auth/register", s.authH.HandleRegister)
 		r.Post("/auth/logout", s.authH.HandleLogout)
+
+		// AUTH — Google OAuth
+		r.Get("/auth/google", s.authH.HandleGoogleLogin)
+		r.Get("/auth/google/callback", s.authH.HandleGoogleCallback)
 
 		// PROTECTED
 		r.Group(func(r chi.Router) {
@@ -137,7 +136,6 @@ func (s *Server) mountRoutes() {
 	})
 }
 
-// handleHome renders the homepage with HTML template.
 func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	user := appmiddleware.UserFromContext(r.Context())
 
@@ -154,7 +152,6 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	s.tmpl.Render(w, r, "home.tmpl", data)
 }
 
-// handleHealth returns 200 if the server and DB are reachable.
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if err := s.db.Ping(r.Context()); err != nil {
 		s.logger.Error("health check failed", "error", err)
@@ -168,7 +165,6 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprintf(w, `{"status":"ok","env":%q}`, s.cfg.AppEnv)
 }
 
-// Stubs
 func (s *Server) handleEditListingPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusNotImplemented)
@@ -187,7 +183,6 @@ func (s *Server) handleUploadPhotos(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(`{"error":"not implemented"}`))
 }
 
-// Start runs the server and blocks until a shutdown signal is received.
 func (s *Server) Start() error {
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%s", s.cfg.AppPort),
@@ -229,7 +224,6 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// requestLogger logs every request.
 func (s *Server) requestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -245,7 +239,6 @@ func (s *Server) requestLogger(next http.Handler) http.Handler {
 	})
 }
 
-// securityHeaders sets defensive HTTP headers.
 func (s *Server) securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -259,7 +252,6 @@ func (s *Server) securityHeaders(next http.Handler) http.Handler {
 	})
 }
 
-// limitRequestBody caps request body size.
 func (s *Server) limitRequestBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)

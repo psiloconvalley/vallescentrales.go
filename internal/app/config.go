@@ -22,6 +22,11 @@ type Config struct {
 	// Database
 	DatabaseURL string
 
+	// Google OAuth (optional — app works without it)
+	GoogleClientID     string
+	GoogleClientSecret string
+	GoogleRedirectURL  string
+
 	// Storage (Cloudflare R2 — configured later)
 	R2AccountID string
 	R2AccessKey string
@@ -31,8 +36,6 @@ type Config struct {
 }
 
 // LoadConfig loads and validates all environment variables.
-// In development: reads from .env file.
-// In production: reads from Railway injected environment.
 func LoadConfig() (*Config, error) {
 	_ = godotenv.Load()
 
@@ -41,6 +44,7 @@ func LoadConfig() (*Config, error) {
 		AppPort: getEnv("PORT", getEnv("APP_PORT", "8080")),
 	}
 
+	// Required
 	var errs []error
 
 	if v, ok := requireEnv("APP_SECRET"); ok {
@@ -59,6 +63,12 @@ func LoadConfig() (*Config, error) {
 		return nil, errors.Join(errs...)
 	}
 
+	// Optional — Google OAuth
+	cfg.GoogleClientID = getEnv("GOOGLE_CLIENT_ID", "")
+	cfg.GoogleClientSecret = getEnv("GOOGLE_CLIENT_SECRET", "")
+	cfg.GoogleRedirectURL = getEnv("GOOGLE_REDIRECT_URL", "")
+
+	// Optional — Storage
 	cfg.R2AccountID = getEnv("R2_ACCOUNT_ID", "")
 	cfg.R2AccessKey = getEnv("R2_ACCESS_KEY", "")
 	cfg.R2SecretKey = getEnv("R2_SECRET_KEY", "")
@@ -74,6 +84,11 @@ func (c *Config) IsDevelopment() bool {
 
 func (c *Config) IsProduction() bool {
 	return c.AppEnv == "production"
+}
+
+// GoogleOAuthEnabled returns true if Google OAuth credentials are configured.
+func (c *Config) GoogleOAuthEnabled() bool {
+	return c.GoogleClientID != ""
 }
 
 func getEnv(key, fallback string) string {

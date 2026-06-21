@@ -42,21 +42,29 @@ func main() {
 	// 4. Build auth layer
 	sessionMgr := auth.NewSessionManager(sessionRepo, cfg.IsProduction())
 
-	// 5. Build middleware
+	// 5. Build Google OAuth (optional — nil if not configured)
+	googleAuth := auth.NewGoogleOAuth(
+		cfg.GoogleClientID,
+		cfg.GoogleClientSecret,
+		cfg.GoogleRedirectURL,
+		cfg.IsProduction(),
+	)
+
+	// 6. Build middleware
 	authMW := middleware.NewAuthMiddleware(sessionMgr, userRepo)
 
-	// 6. Parse templates
+	// 7. Parse templates
 	tmpl, err := app.NewTemplateRenderer()
 	if err != nil {
 		slog.Error("failed to parse templates", "error", err)
 		os.Exit(1)
 	}
 
-	// 7. Build handlers
-	authH    := handlers.NewAuthHandler(userRepo, sessionMgr)
+	// 8. Build handlers
+	authH    := handlers.NewAuthHandler(userRepo, sessionMgr, googleAuth)
 	listingH := handlers.NewListingHandler(listingRepo)
 
-	// 8. Build server and block until shutdown signal
+	// 9. Build server and block until shutdown signal
 	server, err := app.NewServer(cfg, db, authMW, authH, listingH, tmpl)
 	if err != nil {
 		slog.Error("failed to build server", "error", err)

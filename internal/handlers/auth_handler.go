@@ -1,7 +1,6 @@
 // internal/handlers/auth_handler.go
-// Handles registration, login, and logout.
+// Handles registration, login, logout, and Google OAuth.
 // Rule 42: handlers = HTTP only. No SQL. No business logic.
-// Business logic lives in auth package. SQL lives in repo package.
 
 package handlers
 
@@ -18,26 +17,35 @@ import (
 
 // AuthHandler handles all authentication HTTP endpoints.
 type AuthHandler struct {
-	users    *repo.UserRepo
-	sessions *auth.SessionManager
+	users      *repo.UserRepo
+	sessions   *auth.SessionManager
+	googleAuth *auth.GoogleOAuth
 }
 
 // NewAuthHandler creates an AuthHandler.
-func NewAuthHandler(users *repo.UserRepo, sessions *auth.SessionManager) *AuthHandler {
+// googleAuth may be nil if Google OAuth is not configured.
+func NewAuthHandler(users *repo.UserRepo, sessions *auth.SessionManager, googleAuth *auth.GoogleOAuth) *AuthHandler {
 	return &AuthHandler{
-		users:    users,
-		sessions: sessions,
+		users:      users,
+		sessions:   sessions,
+		googleAuth: googleAuth,
 	}
 }
 
-// HandleRegisterPage serves the registration form.
-// Returns JSON stub — replaced with template in Session 010.
-func (h *AuthHandler) HandleRegisterPage(w http.ResponseWriter, r *http.Request) {
-	respond(w, http.StatusOK, map[string]string{"page": "register"})
+// GoogleEnabled returns true if Google OAuth is available.
+func (h *AuthHandler) GoogleEnabled() bool {
+	return h.googleAuth != nil && h.googleAuth.Enabled()
 }
 
-// HandleRegister processes a new user registration.
-// Validates input, hashes password with Argon2id, creates user, starts session.
+// HandleRegisterPage serves the registration form.
+func (h *AuthHandler) HandleRegisterPage(w http.ResponseWriter, r *http.Request) {
+	respond(w, http.StatusOK, map[string]any{
+		"page":          "register",
+		"google_enabled": h.GoogleEnabled(),
+	})
+}
+
+// HandleRegister processes a new user registration via email + password.
 func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		respondError(w, http.StatusBadRequest, "invalid form data")
@@ -48,7 +56,6 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 	fullName := strings.TrimSpace(r.FormValue("full_name"))
 
-	// Input validation
 	if email == "" || password == "" || fullName == "" {
 		respondError(w, http.StatusBadRequest, "email, password, and full name are required")
 		return
@@ -59,7 +66,6 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Hash password — Argon2id, validates length internally
 	passwordHash, err := auth.HashPassword(password)
 	if err != nil {
 		if errors.Is(err, auth.ErrPasswordTooShort) {
@@ -75,7 +81,6 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create user
 	user, err := h.users.Create(r.Context(), email, passwordHash, fullName)
 	if err != nil {
 		if errors.Is(err, repo.ErrEmailTaken) {
@@ -87,31 +92,29 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Start session immediately after registration
 	_, err = h.sessions.Create(r.Context(), w, user.ID)
 	if err != nil {
 		slog.Error("failed to create session after registration",
-			"user_id", user.ID,
-			"error", err,
+			"user_id", user.ID, "error", err,
 		)
 		respondError(w, http.StatusInternalServerError, "registration failed")
 		return
 	}
 
-	slog.Info("user registered", "user_id", user.ID, "email", user.Email)
+	slog.Info("user registered", "user_id", user.ID, "email", user.Email, "provider", "email")
 
-	// Session 010: replace with http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 	respond(w, http.StatusCreated, user.ToSafe())
 }
 
 // HandleLoginPage serves the login form.
-// Returns JSON stub — replaced with template in Session 010.
 func (h *AuthHandler) HandleLoginPage(w http.ResponseWriter, r *http.Request) {
-	respond(w, http.StatusOK, map[string]string{"page": "login"})
+	respond(w, http.StatusOK, map[string]any{
+		"page":          "login",
+		"google_enabled": h.GoogleEnabled(),
+	})
 }
 
-// HandleLogin processes a login attempt.
-// Fetches user, verifies Argon2id hash, creates session on success.
+// HandleLogin processes a login attempt via email + password.
 func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		respondError(w, http.StatusBadRequest, "invalid form data")
@@ -126,11 +129,9 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch user — use generic error message to not leak user existence
 	user, err := h.users.GetByEmail(r.Context(), email)
 	if err != nil {
 		if errors.Is(err, repo.ErrNotFound) {
-			// Do not reveal whether the email exists
 			respondError(w, http.StatusUnauthorized, "invalid email or password")
 			return
 		}
@@ -139,27 +140,29 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify password — constant-time comparison inside
-	if err := auth.VerifyPassword(password, user.PasswordHash); err != nil {
+	if !user.HasPassword() {
+		slog.Info("email login attempt on passwordless account", "email", email)
+		respondError(w, http.StatusUnauthorized, "invalid email or password")
+		return
+	}
+
+	if err := auth.VerifyPassword(password, *user.PasswordHash); err != nil {
 		slog.Info("failed login attempt", "email", email)
 		respondError(w, http.StatusUnauthorized, "invalid email or password")
 		return
 	}
 
-	// Start session
 	_, err = h.sessions.Create(r.Context(), w, user.ID)
 	if err != nil {
 		slog.Error("failed to create session after login",
-			"user_id", user.ID,
-			"error", err,
+			"user_id", user.ID, "error", err,
 		)
 		respondError(w, http.StatusInternalServerError, "login failed")
 		return
 	}
 
-	slog.Info("user logged in", "user_id", user.ID, "email", user.Email)
+	slog.Info("user logged in", "user_id", user.ID, "email", user.Email, "provider", "email")
 
-	// Session 010: replace with http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 	respond(w, http.StatusOK, user.ToSafe())
 }
 
@@ -175,6 +178,104 @@ func (h *AuthHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		slog.Info("user logged out", "user_id", user.ID)
 	}
 
-	// Session 010: replace with http.Redirect(w, r, "/", http.StatusSeeOther)
 	respond(w, http.StatusOK, map[string]string{"message": "logged out"})
+}
+
+// HandleGoogleLogin redirects to Google's consent screen.
+func (h *AuthHandler) HandleGoogleLogin(w http.ResponseWriter, r *http.Request) {
+	if !h.GoogleEnabled() {
+		respondError(w, http.StatusNotImplemented, "google login not configured")
+		return
+	}
+
+	h.googleAuth.RedirectToGoogle(w, r)
+}
+
+// HandleGoogleCallback processes the redirect back from Google.
+// Creates or finds the user, links accounts if needed, starts session.
+func (h *AuthHandler) HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
+	if !h.GoogleEnabled() {
+		respondError(w, http.StatusNotImplemented, "google login not configured")
+		return
+	}
+
+	googleUser, err := h.googleAuth.ProcessCallback(w, r)
+	if err != nil {
+		slog.Error("google oauth callback failed", "error", err)
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		return
+	}
+
+	ctx := r.Context()
+
+	// Try to find existing user by Google ID
+	user, err := h.users.GetByGoogleID(ctx, googleUser.ID)
+	if err == nil {
+		// Existing Google user — start session
+		_, err = h.sessions.Create(ctx, w, user.ID)
+		if err != nil {
+			slog.Error("failed to create session for google user",
+				"user_id", user.ID, "error", err,
+			)
+			http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+			return
+		}
+
+		slog.Info("user logged in via google", "user_id", user.ID, "email", user.Email)
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		return
+	}
+
+	// Check if email already exists (registered via email)
+	existingUser, err := h.users.GetByEmail(ctx, googleUser.Email)
+	if err == nil {
+		// Link Google account to existing email user
+		user, err = h.users.LinkGoogleAccount(ctx, existingUser.ID, googleUser.ID)
+		if err != nil {
+			slog.Error("failed to link google account",
+				"user_id", existingUser.ID, "error", err,
+			)
+			http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+			return
+		}
+
+		_, err = h.sessions.Create(ctx, w, user.ID)
+		if err != nil {
+			slog.Error("failed to create session after google link",
+				"user_id", user.ID, "error", err,
+			)
+			http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+			return
+		}
+
+		slog.Info("google account linked to existing user",
+			"user_id", user.ID, "email", user.Email,
+		)
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		return
+	}
+
+	// New user — create with Google provider
+	user, err = h.users.CreateGoogle(ctx, googleUser.Email, googleUser.Name, googleUser.ID)
+	if err != nil {
+		slog.Error("failed to create google user",
+			"email", googleUser.Email, "error", err,
+		)
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		return
+	}
+
+	_, err = h.sessions.Create(ctx, w, user.ID)
+	if err != nil {
+		slog.Error("failed to create session for new google user",
+			"user_id", user.ID, "error", err,
+		)
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		return
+	}
+
+	slog.Info("user registered via google",
+		"user_id", user.ID, "email", user.Email,
+	)
+	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }
