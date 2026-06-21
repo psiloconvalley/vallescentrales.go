@@ -1,4 +1,4 @@
-/* layout.css — Containers, nav, footer */
+/* layout.css — Containers, nav, footer, mobile menu */
 
 body {
     font-family: var(--font-body);
@@ -15,9 +15,9 @@ h1, h2, h3, h4 {
     text-wrap: balance;
 }
 
-h1 { font-size: 3rem; }
-h2 { font-size: 2.125rem; }
-h3 { font-size: 1.5rem; }
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
 
 a { color: var(--accent); transition: color 0.15s; }
 a:hover { color: var(--accent-dark); }
@@ -26,15 +26,15 @@ a:hover { color: var(--accent-dark); }
     width: 100%;
     max-width: var(--max-width);
     margin: 0 auto;
-    padding: 0 var(--s3);
+    padding: 0 var(--s2);
 }
 
 .main-content {
     flex: 1;
-    padding: var(--s5) 0;
+    padding: var(--s4) 0;
 }
 
-/* Nav — obsidian */
+/* === NAV === */
 .nav {
     background: var(--obsidian);
     position: sticky;
@@ -47,30 +47,104 @@ a:hover { color: var(--accent-dark); }
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px var(--s3);
+    padding: 10px var(--s2);
     max-width: var(--max-width);
     margin: 0 auto;
 }
 
-/* Logo — inline SVG papel picado banner */
+/* Logo */
 .nav-logo {
     display: inline-flex;
     align-items: center;
     line-height: 1;
-    transition: transform 0.15s, opacity 0.15s;
+    transition: opacity 0.15s;
 }
-
-.nav-logo:hover {
-    transform: translateY(-1px);
-    opacity: 0.9;
-}
+.nav-logo:hover { opacity: 0.88; }
 
 .nav-logo-svg {
-    height: 40px;
+    height: 34px;
     width: auto;
     display: block;
 }
 
+/* Hamburger — visible on mobile only */
+.nav-hamburger {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    z-index: 200;
+}
+
+.hamburger-line {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: rgba(255,255,255,0.8);
+    border-radius: 2px;
+    transition: all 0.2s ease;
+}
+
+/* Close button — inside overlay */
+.nav-close {
+    display: none;
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    color: rgba(255,255,255,0.6);
+    font-size: 1.5rem;
+    cursor: pointer;
+    z-index: 210;
+}
+
+/* Mobile menu overlay */
+.nav-menu {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--obsidian);
+    z-index: 190;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-menu.active {
+    display: flex;
+}
+
+.nav-menu.active .nav-close {
+    display: block;
+}
+
+.nav-menu .nav-links {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s4);
+}
+
+.nav-menu .nav-links a {
+    font-size: 1.25rem;
+    color: rgba(255,255,255,0.8);
+}
+.nav-menu .nav-links a:hover { color: white; }
+
+.nav-menu .nav-cta {
+    font-size: 1.125rem;
+    padding: 12px 24px;
+}
+
+.nav-menu .nav-logout-btn {
+    color: rgba(255,255,255,0.6);
+    font-size: 1.25rem;
+    cursor: pointer;
+}
+.nav-menu .nav-logout-btn:hover { color: white; }
+
+/* Nav links — default hidden on mobile */
 .nav-links {
     display: flex;
     gap: var(--s4);
@@ -103,7 +177,7 @@ a:hover { color: var(--accent-dark); }
 }
 .nav-logout-btn:hover { color: white; }
 
-/* Footer */
+/* === FOOTER === */
 .footer {
     background: var(--obsidian);
     color: rgba(255,255,255,0.4);
@@ -144,11 +218,7 @@ a:hover { color: var(--accent-dark); }
     letter-spacing: -0.01em;
 }
 
-.footer-links {
-    display: flex;
-    gap: var(--s3);
-}
-
+.footer-links { display: flex; gap: var(--s3); }
 .footer a { color: rgba(255,255,255,0.4); }
 .footer a:hover { color: white; }
 
@@ -160,9 +230,55 @@ a:hover { color: var(--accent-dark); }
     color: rgba(255,255,255,0.25);
 }
 
+/* === RESPONSIVE === */
+
+/* Tablet+ */
+@media (min-width: 768px) {
+    h1 { font-size: 3rem; }
+    h2 { font-size: 2.125rem; }
+
+    .container { padding: 0 var(--s3); }
+    .main-content { padding: var(--s5) 0; }
+
+    .nav-inner { padding: 10px var(--s3); }
+    .nav-logo-svg { height: 38px; }
+
+    /* Hide hamburger on desktop */
+    .nav-hamburger { display: none; }
+    .nav-close { display: none !important; }
+
+    /* Show nav links inline on desktop */
+    .nav-menu {
+        display: flex !important;
+        position: static;
+        background: none;
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .nav-menu .nav-links {
+        flex-direction: row;
+        gap: var(--s4);
+    }
+
+    .nav-menu .nav-links a {
+        font-size: 0.875rem;
+    }
+
+    .nav-menu .nav-cta {
+        font-size: 0.875rem;
+        padding: 8px 16px;
+    }
+
+    .nav-menu .nav-logout-btn {
+        font-size: 0.875rem;
+    }
+}
+
+/* Desktop */
 @media (min-width: 1024px) {
     h1 { font-size: 4rem; }
     h2 { font-size: 2.5rem; }
-    .nav-inner { padding: 8px var(--s4); }
-    .nav-logo-svg { height: 46px; }
+    .nav-inner { padding: 10px var(--s4); }
+    .nav-logo-svg { height: 42px; }
 }

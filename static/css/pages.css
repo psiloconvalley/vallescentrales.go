@@ -10,45 +10,44 @@
 .flash-error   { background: var(--error-bg); color: var(--error); }
 .flash-success { background: var(--success-bg); color: var(--sage); }
 
-/* Hero — dramatic, modern */
+/* Hero — mobile first */
 .hero {
     background: var(--hero-bg);
-    color: var(--hero-text);
-    padding: var(--s7) 0;
+    color: white;
+    padding: var(--s5) 0;
     text-align: center;
 }
 .hero h1 {
     color: white;
-    font-size: 2.75rem;
+    font-size: 2rem;
     font-weight: 800;
     margin-bottom: var(--s2);
     letter-spacing: -0.03em;
-    line-height: 1.05;
+    line-height: 1.08;
 }
 .hero p {
     color: rgba(255,255,255,0.7);
-    font-size: 1.125rem;
+    font-size: 1rem;
     max-width: 520px;
-    margin: 0 auto var(--s4);
+    margin: 0 auto var(--s3);
     line-height: 1.6;
 }
 .hero .btn {
-    padding: 14px var(--s4);
-    font-size: 1rem;
-    border-radius: var(--radius-sm);
+    padding: 14px var(--s3);
+    font-size: 0.9375rem;
 }
 
 /* Auth */
 .auth-container {
     max-width: 400px;
-    margin: var(--s6) auto;
-    padding: var(--s4);
+    margin: var(--s4) auto;
+    padding: var(--s3);
     background: var(--surface);
     border-radius: var(--radius);
     box-shadow: var(--shadow-md);
     border: 1px solid var(--border);
 }
-.auth-container h1 { text-align: center; margin-bottom: var(--s4); font-size: 1.5rem; }
+.auth-container h1 { text-align: center; margin-bottom: var(--s3); font-size: 1.5rem; }
 .auth-footer { text-align: center; margin-top: var(--s3); font-size: 0.8125rem; color: var(--text-muted); }
 
 /* Dashboard */
@@ -58,19 +57,26 @@
 .dashboard-table td { font-size: 0.875rem; }
 
 /* Detail */
-.detail-price { font-family: var(--font-mono); font-size: 2rem; font-weight: 700; color: var(--primary); letter-spacing: -0.02em; }
+.detail-price { font-family: var(--font-mono); font-size: 1.5rem; font-weight: 700; color: var(--obsidian); letter-spacing: -0.02em; }
 .detail-grid  { display: grid; gap: var(--s3); }
 .detail-info  { background: var(--surface); border-radius: var(--radius); padding: var(--s3); box-shadow: var(--shadow); border: 1px solid var(--border); }
 .detail-info dt { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-light); margin-bottom: 2px; }
 .detail-info dd { font-size: 1rem; color: var(--text); margin-bottom: var(--s2); }
 
 /* Empty state */
-.empty-state { text-align: center; padding: var(--s7) var(--s2); }
+.empty-state { text-align: center; padding: var(--s5) var(--s2); }
 .empty-state h2 { color: var(--text-muted); margin-bottom: var(--s2); font-weight: 600; }
 .empty-state p { color: var(--text-light); max-width: 400px; margin: 0 auto var(--s3); }
 
 @media (min-width: 640px) {
     .detail-grid { grid-template-columns: 2fr 1fr; }
+    .detail-price { font-size: 2rem; }
     .hero h1 { font-size: 3.25rem; }
+    .hero p { font-size: 1.125rem; }
+    .hero { padding: var(--s7) 0; }
+    .auth-container { margin: var(--s6) auto; padding: var(--s4); }
 }
-@media (min-width: 1024px) { .hero h1 { font-size: 4rem; } }
+
+@media (min-width: 1024px) {
+    .hero h1 { font-size: 4rem; }
+}
