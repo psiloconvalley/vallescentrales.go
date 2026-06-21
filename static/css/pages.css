@@ -1,16 +1,14 @@
-/* pages.css — Page-specific layout, hero, grid, auth, dashboard */
+/* pages.css — Page-level layout only */
+/* auth styles live in auth.css */
+/* flash styles live in components.css */
+/* components live in components.css */
 
 /* Listing grid */
 .listing-grid { display: grid; grid-template-columns: 1fr; gap: var(--s3); }
 @media (min-width: 640px)  { .listing-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1024px) { .listing-grid { grid-template-columns: repeat(3, 1fr); } }
 
-/* Flash messages */
-.flash { padding: var(--s2) var(--s3); border-radius: var(--radius-sm); margin-bottom: var(--s3); font-size: 0.875rem; font-weight: 500; }
-.flash-error   { background: var(--error-bg); color: var(--error); }
-.flash-success { background: var(--success-bg); color: var(--sage); }
-
-/* Hero — mobile first */
+/* Hero */
 .hero {
     background: var(--hero-bg);
     color: white;
@@ -32,49 +30,78 @@
     margin: 0 auto var(--s3);
     line-height: 1.6;
 }
-.hero .btn {
-    padding: 14px var(--s3);
-    font-size: 0.9375rem;
-}
-
-/* Auth */
-.auth-container {
-    max-width: 400px;
-    margin: var(--s4) auto;
-    padding: var(--s3);
-    background: var(--surface);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--border);
-}
-.auth-container h1 { text-align: center; margin-bottom: var(--s3); font-size: 1.5rem; }
-.auth-footer { text-align: center; margin-top: var(--s3); font-size: 0.8125rem; color: var(--text-muted); }
+.hero .btn { height: 52px; padding: 0 var(--s4); font-size: 1rem; }
 
 /* Dashboard */
-.dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--s4); flex-wrap: wrap; gap: var(--s2); }
-.dashboard-table th, .dashboard-table td { padding: var(--s2); text-align: left; border-bottom: 1px solid var(--border); }
-.dashboard-table th { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-light); }
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--s4);
+    flex-wrap: wrap;
+    gap: var(--s2);
+}
+.dashboard-table th,
+.dashboard-table td {
+    padding: var(--s2);
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+.dashboard-table th {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-light);
+    background: var(--bg);
+}
 .dashboard-table td { font-size: 0.875rem; }
 
-/* Detail */
-.detail-price { font-family: var(--font-mono); font-size: 1.5rem; font-weight: 700; color: var(--obsidian); letter-spacing: -0.02em; }
+/* Listing detail */
+.detail-price {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--obsidian);
+    letter-spacing: -0.02em;
+}
 .detail-grid  { display: grid; gap: var(--s3); }
-.detail-info  { background: var(--surface); border-radius: var(--radius); padding: var(--s3); box-shadow: var(--shadow); border: 1px solid var(--border); }
-.detail-info dt { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-light); margin-bottom: 2px; }
-.detail-info dd { font-size: 1rem; color: var(--text); margin-bottom: var(--s2); }
+.detail-info  {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: var(--s3);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+.detail-info dt {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-light);
+    margin-bottom: 2px;
+}
+.detail-info dd {
+    font-size: 1rem;
+    color: var(--text);
+    margin-bottom: var(--s2);
+}
 
 /* Empty state */
 .empty-state { text-align: center; padding: var(--s5) var(--s2); }
 .empty-state h2 { color: var(--text-muted); margin-bottom: var(--s2); font-weight: 600; }
 .empty-state p { color: var(--text-light); max-width: 400px; margin: 0 auto var(--s3); }
 
+/* Page section utility */
+.page-section { padding: var(--s5) 0; }
+.page-header  { margin-bottom: var(--s4); }
+
 @media (min-width: 640px) {
     .detail-grid { grid-template-columns: 2fr 1fr; }
     .detail-price { font-size: 2rem; }
     .hero h1 { font-size: 3.25rem; }
-    .hero p { font-size: 1.125rem; }
-    .hero { padding: var(--s7) 0; }
-    .auth-container { margin: var(--s6) auto; padding: var(--s4); }
+    .hero p  { font-size: 1.125rem; }
+    .hero    { padding: var(--s7) 0; }
 }
 
 @media (min-width: 1024px) {

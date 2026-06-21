@@ -38,7 +38,7 @@
     {{template "footer" .}}
 
     <script src="/static/js/nav.js"></script>
-    <script src="/static/js/auth.js"></script>
+    {{if .NeedsAuthJS}}<script src="/static/js/auth.js"></script>{{end}}
 </body>
 </html>
 {{end}}

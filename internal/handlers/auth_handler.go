@@ -24,8 +24,6 @@ type AuthHandler struct {
 }
 
 // NewAuthHandler creates an AuthHandler.
-// googleAuth may be nil if Google OAuth is not configured.
-// render may be nil — falls back to JSON responses.
 func NewAuthHandler(users *repo.UserRepo, sessions *auth.SessionManager, googleAuth *auth.GoogleOAuth, render Renderer) *AuthHandler {
 	return &AuthHandler{
 		users:      users,
@@ -40,15 +38,16 @@ func (h *AuthHandler) GoogleEnabled() bool {
 	return h.googleAuth != nil && h.googleAuth.Enabled()
 }
 
-// renderPage renders an HTML template if renderer is available, otherwise JSON.
+// renderPage renders an HTML template with all required data injected.
+// NeedsAuthJS is always true for auth pages — loads password/strength JS.
 func (h *AuthHandler) renderPage(w http.ResponseWriter, r *http.Request, tmpl string, data map[string]any) {
 	if data == nil {
 		data = make(map[string]any)
 	}
 
-	// Always inject user and google state into template data
-	data["User"] = middleware.UserFromContext(r.Context())
+	data["User"]         = middleware.UserFromContext(r.Context())
 	data["GoogleEnabled"] = h.GoogleEnabled()
+	data["NeedsAuthJS"]  = true
 
 	if data["Meta"] == nil {
 		data["Meta"] = map[string]string{"Title": "", "Description": ""}
@@ -68,9 +67,7 @@ func (h *AuthHandler) renderPage(w http.ResponseWriter, r *http.Request, tmpl st
 // HandleRegisterPage serves the registration form.
 func (h *AuthHandler) HandleRegisterPage(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "register.tmpl", map[string]any{
-		"Meta": map[string]string{
-			"Title": "Crear Cuenta",
-		},
+		"Meta": map[string]string{"Title": "Crear Cuenta"},
 	})
 }
 
@@ -121,7 +118,6 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		} else {
 			slog.Error("failed to hash password during registration", "error", err)
 		}
-
 		h.renderPage(w, r, "register.tmpl", map[string]any{
 			"Error":    errMsg,
 			"FormData": formData,
@@ -138,7 +134,6 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		} else {
 			slog.Error("failed to create user", "email", email, "error", err)
 		}
-
 		h.renderPage(w, r, "register.tmpl", map[string]any{
 			"Error":    errMsg,
 			"FormData": formData,
@@ -160,16 +155,13 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	slog.Info("user registered", "user_id", user.ID, "email", user.Email, "provider", "email")
-
 	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }
 
 // HandleLoginPage serves the login form.
 func (h *AuthHandler) HandleLoginPage(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "login.tmpl", map[string]any{
-		"Meta": map[string]string{
-			"Title": "Ingresar",
-		},
+		"Meta": map[string]string{"Title": "Ingresar"},
 	})
 }
 
@@ -186,9 +178,7 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	email    := strings.TrimSpace(strings.ToLower(r.FormValue("email")))
 	password := r.FormValue("password")
 
-	formData := map[string]string{
-		"Email": email,
-	}
+	formData := map[string]string{"Email": email}
 
 	if email == "" || password == "" {
 		h.renderPage(w, r, "login.tmpl", map[string]any{
@@ -250,7 +240,6 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	slog.Info("user logged in", "user_id", user.ID, "email", user.Email, "provider", "email")
-
 	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }
 
@@ -275,7 +264,6 @@ func (h *AuthHandler) HandleGoogleLogin(w http.ResponseWriter, r *http.Request) 
 		respondError(w, http.StatusNotImplemented, "google login not configured")
 		return
 	}
-
 	h.googleAuth.RedirectToGoogle(w, r)
 }
 
@@ -295,14 +283,12 @@ func (h *AuthHandler) HandleGoogleCallback(w http.ResponseWriter, r *http.Reques
 
 	ctx := r.Context()
 
-	// Try to find existing user by Google ID
+	// Try existing Google user
 	user, err := h.users.GetByGoogleID(ctx, googleUser.ID)
 	if err == nil {
 		_, err = h.sessions.Create(ctx, w, user.ID)
 		if err != nil {
-			slog.Error("failed to create session for google user",
-				"user_id", user.ID, "error", err,
-			)
+			slog.Error("failed to create session for google user", "user_id", user.ID, "error", err)
 			http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 			return
 		}
@@ -311,55 +297,41 @@ func (h *AuthHandler) HandleGoogleCallback(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Check if email already exists (registered via email)
+	// Check if email exists — link accounts
 	existingUser, err := h.users.GetByEmail(ctx, googleUser.Email)
 	if err == nil {
 		user, err = h.users.LinkGoogleAccount(ctx, existingUser.ID, googleUser.ID)
 		if err != nil {
-			slog.Error("failed to link google account",
-				"user_id", existingUser.ID, "error", err,
-			)
+			slog.Error("failed to link google account", "user_id", existingUser.ID, "error", err)
 			http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 			return
 		}
-
 		_, err = h.sessions.Create(ctx, w, user.ID)
 		if err != nil {
-			slog.Error("failed to create session after google link",
-				"user_id", user.ID, "error", err,
-			)
+			slog.Error("failed to create session after google link", "user_id", user.ID, "error", err)
 			http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 			return
 		}
-
-		slog.Info("google account linked to existing user",
-			"user_id", user.ID, "email", user.Email,
-		)
+		slog.Info("google account linked", "user_id", user.ID, "email", user.Email)
 		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 		return
 	}
 
-	// New user — create with Google provider
+	// New Google user
 	user, err = h.users.CreateGoogle(ctx, googleUser.Email, googleUser.Name, googleUser.ID)
 	if err != nil {
-		slog.Error("failed to create google user",
-			"email", googleUser.Email, "error", err,
-		)
+		slog.Error("failed to create google user", "email", googleUser.Email, "error", err)
 		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 		return
 	}
 
 	_, err = h.sessions.Create(ctx, w, user.ID)
 	if err != nil {
-		slog.Error("failed to create session for new google user",
-			"user_id", user.ID, "error", err,
-		)
+		slog.Error("failed to create session for new google user", "user_id", user.ID, "error", err)
 		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 		return
 	}
 
-	slog.Info("user registered via google",
-		"user_id", user.ID, "email", user.Email,
-	)
+	slog.Info("user registered via google", "user_id", user.ID, "email", user.Email)
 	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }

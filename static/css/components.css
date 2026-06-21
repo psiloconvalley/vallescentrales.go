@@ -197,3 +197,27 @@
 .status-under_contract { background: #FFF8E1; color: #B8860B; }
 .status-sold           { background: #E8F5E9; color: #2E7D32; }
 .status-archived       { background: #F5F5F5; color: #AAA; }
+
+/* Flash messages — component, appears on any page */
+.flash {
+    padding: var(--s2) var(--s3);
+    border-radius: var(--radius);
+    margin-bottom: var(--s3);
+    font-size: 0.875rem;
+    font-weight: 600;
+    animation: flashIn 0.3s ease;
+}
+.flash-error   {
+    background: var(--error-bg);
+    color: var(--error);
+    border: 2px solid rgba(220,53,69,0.15);
+}
+.flash-success {
+    background: var(--success-bg);
+    color: var(--sage);
+    border: 2px solid rgba(107,143,113,0.15);
+}
+@keyframes flashIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
