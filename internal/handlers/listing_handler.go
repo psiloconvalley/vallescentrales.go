@@ -231,26 +231,23 @@ func (h *ListingHandler) HandleCreateListing(w http.ResponseWriter, r *http.Requ
 	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }
 
-// HandleDashboard returns all listings owned by the current user.
+// HandleDashboard renders the owner dashboard with their listings.
 func (h *ListingHandler) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
-		respondError(w, http.StatusUnauthorized, "authentication required")
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 		return
 	}
 
 	listings, err := h.listings.ListByOwner(r.Context(), user.ID)
 	if err != nil {
 		slog.Error("failed to load dashboard listings", "user_id", user.ID, "error", err)
-		respondError(w, http.StatusInternalServerError, "failed to load dashboard")
-		return
+		listings = nil
 	}
 
-	respond(w, http.StatusOK, map[string]any{
-		"user":     user.ToSafe(),
-		"listings": listings,
-		"total":    len(listings),
-	})
+	h.render.Render(w, r, "dashboard.tmpl", h.pageData(r, "Mi Panel", map[string]any{
+		"Listings": listings,
+	}))
 }
 
 // HandleDeleteListing archives a listing (soft delete).
@@ -285,7 +282,6 @@ func (h *ListingHandler) HandleDeleteListing(w http.ResponseWriter, r *http.Requ
 	}
 
 	slog.Info("listing archived", "listing_id", listing.ID, "owner_id", user.ID)
-
 	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }
 

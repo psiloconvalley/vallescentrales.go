@@ -1,0 +1,52 @@
+{{define "content"}}
+<div class="container">
+    <div class="dashboard-header">
+        <div>
+            <h1>Mi Panel</h1>
+            <p class="text-muted">Gestiona tus propiedades en los Valles Centrales</p>
+        </div>
+        <a href="/listings/new" class="btn btn-primary">+ Publicar Propiedad</a>
+    </div>
+
+    {{if .Listings}}
+        <div class="dashboard-table-wrap">
+            <table class="dashboard-table">
+                <thead>
+                    <tr>
+                        <th>Propiedad</th>
+                        <th>Tipo</th>
+                        <th>Precio</th>
+                        <th>Estado</th>
+                        <th class="text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Listings}}
+                    <tr>
+                        <td>
+                            <div class="font-heading" style="font-weight:600; color:var(--obsidian);">{{.Title}}</div>
+                            <div class="text-xs text-light">{{.Municipality}}</div>
+                        </td>
+                        <td><span class="badge badge-{{.PropertyType}}">{{.PropertyType}}</span></td>
+                        <td class="font-mono text-sm">${{printf "%.0f" .PriceMXN}}</td>
+                        <td><span class="status status-{{.Status}}">{{.Status}}</span></td>
+                        <td class="text-right">
+                            <div style="display:flex; gap:8px; justify-content:flex-end;">
+                                <a href="/listings/{{.Slug}}/edit" class="btn btn-secondary btn-sm">Editar</a>
+                                <a href="/listings/{{.Slug}}" class="btn btn-secondary btn-sm" target="_blank">Ver</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    {{else}}
+        <div class="empty-state">
+            <h2>Aún no tienes propiedades</h2>
+            <p>Comienza publicando tu primer terreno o casa para que aparezca en los Valles Centrales.</p>
+            <a href="/listings/new" class="btn btn-primary btn-lg mt-3">Publicar Ahora</a>
+        </div>
+    {{end}}
+</div>
+{{end}}
