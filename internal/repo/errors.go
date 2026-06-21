@@ -14,3 +14,6 @@ var ErrEmailTaken = errors.New("email already taken")
 
 // ErrSlugTaken is returned when a listing slug already exists.
 var ErrSlugTaken = errors.New("slug already taken")
+
+// ErrUsernameTaken is returned when a username already exists.
+var ErrUsernameTaken = errors.New("username already taken")

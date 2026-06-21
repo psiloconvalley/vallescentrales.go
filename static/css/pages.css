@@ -107,3 +107,67 @@
 @media (min-width: 1024px) {
     .hero h1 { font-size: 4rem; }
 }
+
+/* Profile header */
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: var(--s3);
+    padding: var(--s4);
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    margin-bottom: var(--s4);
+}
+
+.profile-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--obsidian);
+    color: #D8A25E;
+    font-family: var(--font-heading);
+    font-size: 1.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    text-transform: uppercase;
+}
+
+.profile-info h1 {
+    font-size: 1.5rem;
+    margin-bottom: 4px;
+}
+
+.auth-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    margin-top: 6px;
+}
+
+.auth-badge-google {
+    background: #EEF2FF;
+    color: #4F46E5;
+}
+
+.auth-badge-email {
+    background: var(--success-bg);
+    color: var(--sage);
+}
+
+.dashboard-table-wrap {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    overflow: hidden;
+}

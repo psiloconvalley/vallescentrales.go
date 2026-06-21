@@ -2,8 +2,9 @@
 // All SQL for the users table.
 // Rule 42: repo = SQL only. No business logic. No HTTP.
 // Rule 8:  Always parameterized queries. Never string interpolation.
-// Rule 9:  Column names verified against live schema 2026-06-20.
+// Rule 9:  Column names verified against live schema 2026-06-21.
 //          Updated for migration 000005 (google_id, auth_provider).
+//          Updated for migration 000006 (profile fields).
 
 package repo
 
@@ -31,12 +32,15 @@ func NewUserRepo(db *pgxpool.Pool) *UserRepo {
 }
 
 // userColumns is the canonical column list for all user queries.
-// Defined once to prevent drift between SELECT and RETURNING clauses.
-const userColumns = `id, email, password_hash, full_name, phone, whatsapp,
-	role, is_verified, google_id, auth_provider, created_at, updated_at`
+// Order must match scanUser exactly.
+const userColumns = `
+	id, email, password_hash, full_name, phone, whatsapp,
+	role, is_verified, google_id, auth_provider, created_at, updated_at,
+	username, display_name, bio, avatar_url, website, location,
+	agency_name, languages, show_phone, show_whatsapp, notify_email, preferred_lang`
 
 // scanUser scans a row into a User struct.
-// Every query that returns a user must use this — no duplicate scan logic.
+// Column order must match userColumns exactly.
 func scanUser(row pgx.Row) (*models.User, error) {
 	user := &models.User{}
 	err := row.Scan(
@@ -52,12 +56,23 @@ func scanUser(row pgx.Row) (*models.User, error) {
 		&user.AuthProvider,
 		&user.CreatedAt,
 		&user.UpdatedAt,
+		&user.Username,
+		&user.DisplayName,
+		&user.Bio,
+		&user.AvatarURL,
+		&user.Website,
+		&user.Location,
+		&user.AgencyName,
+		&user.Languages,
+		&user.ShowPhone,
+		&user.ShowWhatsApp,
+		&user.NotifyEmail,
+		&user.PreferredLang,
 	)
 	return user, err
 }
 
-// Create inserts a new email-registered user and returns the created record.
-// password_hash must already be an Argon2id hash — never raw password.
+// Create inserts a new email-registered user.
 func (r *UserRepo) Create(ctx context.Context, email, passwordHash, fullName string) (*models.User, error) {
 	query := fmt.Sprintf(`
 		INSERT INTO users (email, password_hash, full_name, auth_provider)
@@ -76,8 +91,7 @@ func (r *UserRepo) Create(ctx context.Context, email, passwordHash, fullName str
 }
 
 // CreateGoogle inserts a new Google-registered user.
-// No password is set — auth_provider is 'google'.
-// is_verified is true because Google verified the email.
+// Sets avatar_url from Google profile picture if provided.
 func (r *UserRepo) CreateGoogle(ctx context.Context, email, fullName, googleID string) (*models.User, error) {
 	query := fmt.Sprintf(`
 		INSERT INTO users (email, full_name, google_id, auth_provider, is_verified)
@@ -90,6 +104,24 @@ func (r *UserRepo) CreateGoogle(ctx context.Context, email, fullName, googleID s
 			return nil, ErrEmailTaken
 		}
 		return nil, fmt.Errorf("user_repo.CreateGoogle: %w", err)
+	}
+
+	return user, nil
+}
+
+// CreateGoogleWithAvatar inserts a new Google user and stores their profile picture.
+func (r *UserRepo) CreateGoogleWithAvatar(ctx context.Context, email, fullName, googleID, avatarURL string) (*models.User, error) {
+	query := fmt.Sprintf(`
+		INSERT INTO users (email, full_name, google_id, auth_provider, is_verified, avatar_url)
+		VALUES ($1, $2, $3, 'google', TRUE, $4)
+		RETURNING %s`, userColumns)
+
+	user, err := scanUser(r.db.QueryRow(ctx, query, email, fullName, googleID, avatarURL))
+	if err != nil {
+		if isUniqueViolation(err) {
+			return nil, ErrEmailTaken
+		}
+		return nil, fmt.Errorf("user_repo.CreateGoogleWithAvatar: %w", err)
 	}
 
 	return user, nil
@@ -111,7 +143,6 @@ func (r *UserRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.User, err
 }
 
 // GetByEmail fetches a user by email address.
-// Used during login to retrieve the stored password hash.
 func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	query := fmt.Sprintf(`SELECT %s FROM users WHERE email = $1`, userColumns)
 
@@ -127,7 +158,6 @@ func (r *UserRepo) GetByEmail(ctx context.Context, email string) (*models.User, 
 }
 
 // GetByGoogleID fetches a user by their Google account ID.
-// Used during Google OAuth callback to find existing users.
 func (r *UserRepo) GetByGoogleID(ctx context.Context, googleID string) (*models.User, error) {
 	query := fmt.Sprintf(`SELECT %s FROM users WHERE google_id = $1`, userColumns)
 
@@ -142,8 +172,23 @@ func (r *UserRepo) GetByGoogleID(ctx context.Context, googleID string) (*models.
 	return user, nil
 }
 
-// LinkGoogleAccount adds a Google ID to an existing email-registered user.
-// Used when a user who registered with email later signs in with Google.
+// GetByUsername fetches a user by their public username.
+// Used for public profile pages /profile/{username}.
+func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*models.User, error) {
+	query := fmt.Sprintf(`SELECT %s FROM users WHERE username = $1`, userColumns)
+
+	user, err := scanUser(r.db.QueryRow(ctx, query, username))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("user_repo.GetByUsername: %w", err)
+	}
+
+	return user, nil
+}
+
+// LinkGoogleAccount adds a Google ID to an existing email user.
 func (r *UserRepo) LinkGoogleAccount(ctx context.Context, userID uuid.UUID, googleID string) (*models.User, error) {
 	query := fmt.Sprintf(`
 		UPDATE users
@@ -162,20 +207,89 @@ func (r *UserRepo) LinkGoogleAccount(ctx context.Context, userID uuid.UUID, goog
 	return user, nil
 }
 
-// UpdateProfile updates mutable profile fields.
-func (r *UserRepo) UpdateProfile(ctx context.Context, id uuid.UUID, fullName string, phone, whatsapp *string) (*models.User, error) {
+// UpdateProfileInput holds all editable profile fields.
+type UpdateProfileInput struct {
+	FullName      string
+	DisplayName   *string
+	Username      *string
+	Bio           *string
+	Website       *string
+	Location      *string
+	AgencyName    *string
+	Phone         *string
+	WhatsApp      *string
+	Languages     []string
+	ShowPhone     bool
+	ShowWhatsApp  bool
+	NotifyEmail   bool
+	PreferredLang string
+}
+
+// UpdateProfile updates all mutable profile fields in one query.
+func (r *UserRepo) UpdateProfile(ctx context.Context, id uuid.UUID, input UpdateProfileInput) (*models.User, error) {
 	query := fmt.Sprintf(`
 		UPDATE users
-		SET full_name = $2, phone = $3, whatsapp = $4
+		SET full_name      = $2,
+		    display_name   = $3,
+		    username       = $4,
+		    bio            = $5,
+		    website        = $6,
+		    location       = $7,
+		    agency_name    = $8,
+		    phone          = $9,
+		    whatsapp       = $10,
+		    languages      = $11,
+		    show_phone     = $12,
+		    show_whatsapp  = $13,
+		    notify_email   = $14,
+		    preferred_lang = $15
 		WHERE id = $1
 		RETURNING %s`, userColumns)
 
-	user, err := scanUser(r.db.QueryRow(ctx, query, id, fullName, phone, whatsapp))
+	user, err := scanUser(r.db.QueryRow(ctx, query,
+		id,
+		input.FullName,
+		input.DisplayName,
+		input.Username,
+		input.Bio,
+		input.Website,
+		input.Location,
+		input.AgencyName,
+		input.Phone,
+		input.WhatsApp,
+		input.Languages,
+		input.ShowPhone,
+		input.ShowWhatsApp,
+		input.NotifyEmail,
+		input.PreferredLang,
+	))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		}
+		if isUniqueViolation(err) {
+			return nil, ErrUsernameTaken
+		}
 		return nil, fmt.Errorf("user_repo.UpdateProfile: %w", err)
+	}
+
+	return user, nil
+}
+
+// UpdateAvatar updates the user's avatar URL.
+func (r *UserRepo) UpdateAvatar(ctx context.Context, id uuid.UUID, avatarURL string) (*models.User, error) {
+	query := fmt.Sprintf(`
+		UPDATE users
+		SET avatar_url = $2
+		WHERE id = $1
+		RETURNING %s`, userColumns)
+
+	user, err := scanUser(r.db.QueryRow(ctx, query, id, avatarURL))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("user_repo.UpdateAvatar: %w", err)
 	}
 
 	return user, nil
