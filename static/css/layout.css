@@ -77,6 +77,7 @@ a:hover { color: var(--accent-dark); }
     height: 32px;
     cursor: pointer;
     z-index: 200;
+    position: relative;
 }
 
 .hamburger-line {
@@ -88,21 +89,24 @@ a:hover { color: var(--accent-dark); }
     transition: all 0.2s ease;
 }
 
-/* Close button — inside overlay */
-.nav-close {
-    display: none;
-    position: absolute;
-    top: 20px;
-    right: 24px;
-    color: rgba(255,255,255,0.6);
-    font-size: 1.5rem;
-    cursor: pointer;
-    z-index: 210;
+/* Hide hamburger when menu is open */
+.nav-hamburger.hidden {
+    visibility: hidden;
+    pointer-events: none;
 }
 
-/* Mobile menu overlay */
+/* Close button — only visible inside active overlay */
+.nav-close {
+    display: none;
+}
+
+/* Mobile menu overlay — hidden by default */
 .nav-menu {
     display: none;
+}
+
+.nav-menu.active {
+    display: flex;
     position: fixed;
     inset: 0;
     background: var(--obsidian);
@@ -112,12 +116,20 @@ a:hover { color: var(--accent-dark); }
     justify-content: center;
 }
 
-.nav-menu.active {
-    display: flex;
-}
-
 .nav-menu.active .nav-close {
     display: block;
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    color: rgba(255,255,255,0.6);
+    font-size: 1.75rem;
+    cursor: pointer;
+    z-index: 210;
+    line-height: 1;
+    padding: 8px;
+}
+.nav-menu.active .nav-close:hover {
+    color: white;
 }
 
 .nav-menu .nav-links {
@@ -144,7 +156,7 @@ a:hover { color: var(--accent-dark); }
 }
 .nav-menu .nav-logout-btn:hover { color: white; }
 
-/* Nav links — default hidden on mobile */
+/* Nav links base */
 .nav-links {
     display: flex;
     gap: var(--s4);
@@ -193,10 +205,10 @@ a:hover { color: var(--accent-dark); }
 
 .footer-top {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     flex-wrap: wrap;
-    gap: var(--s2);
+    gap: var(--s3);
     padding-bottom: var(--s3);
     border-bottom: 1px solid rgba(255,255,255,0.08);
     margin-bottom: var(--s3);
@@ -204,10 +216,10 @@ a:hover { color: var(--accent-dark); }
 
 .footer-bottom {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
-    flex-wrap: wrap;
-    gap: var(--s2);
+    gap: var(--s1);
+    text-align: center;
 }
 
 .footer-brand {
@@ -218,7 +230,11 @@ a:hover { color: var(--accent-dark); }
     letter-spacing: -0.01em;
 }
 
-.footer-links { display: flex; gap: var(--s3); }
+.footer-links {
+    display: flex;
+    gap: var(--s3);
+}
+
 .footer a { color: rgba(255,255,255,0.4); }
 .footer a:hover { color: white; }
 
@@ -232,7 +248,6 @@ a:hover { color: var(--accent-dark); }
 
 /* === RESPONSIVE === */
 
-/* Tablet+ */
 @media (min-width: 768px) {
     h1 { font-size: 3rem; }
     h2 { font-size: 2.125rem; }
@@ -243,11 +258,9 @@ a:hover { color: var(--accent-dark); }
     .nav-inner { padding: 10px var(--s3); }
     .nav-logo-svg { height: 38px; }
 
-    /* Hide hamburger on desktop */
     .nav-hamburger { display: none; }
     .nav-close { display: none !important; }
 
-    /* Show nav links inline on desktop */
     .nav-menu {
         display: flex !important;
         position: static;
@@ -261,21 +274,16 @@ a:hover { color: var(--accent-dark); }
         gap: var(--s4);
     }
 
-    .nav-menu .nav-links a {
-        font-size: 0.875rem;
-    }
+    .nav-menu .nav-links a { font-size: 0.875rem; }
+    .nav-menu .nav-cta { font-size: 0.875rem; padding: 8px 16px; }
+    .nav-menu .nav-logout-btn { font-size: 0.875rem; }
 
-    .nav-menu .nav-cta {
-        font-size: 0.875rem;
-        padding: 8px 16px;
-    }
-
-    .nav-menu .nav-logout-btn {
-        font-size: 0.875rem;
+    .footer-bottom {
+        flex-direction: row;
+        justify-content: space-between;
     }
 }
 
-/* Desktop */
 @media (min-width: 1024px) {
     h1 { font-size: 4rem; }
     h2 { font-size: 2.5rem; }

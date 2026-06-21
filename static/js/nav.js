@@ -1,5 +1,5 @@
 // nav.js — mobile hamburger menu toggle
-// Pure vanilla JS. No dependencies. No frameworks.
+// Pure vanilla JS. No dependencies.
 
 document.addEventListener('DOMContentLoaded', function() {
     var toggle = document.getElementById('navToggle');
@@ -10,12 +10,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     toggle.addEventListener('click', function() {
         menu.classList.add('active');
+        toggle.classList.add('hidden');
         toggle.setAttribute('aria-expanded', 'true');
         document.body.style.overflow = 'hidden';
     });
 
     function closeMenu() {
         menu.classList.remove('active');
+        toggle.classList.remove('hidden');
         toggle.setAttribute('aria-expanded', 'false');
         document.body.style.overflow = '';
     }
@@ -24,14 +26,12 @@ document.addEventListener('DOMContentLoaded', function() {
         close.addEventListener('click', closeMenu);
     }
 
-    // Close on backdrop click
     menu.addEventListener('click', function(e) {
         if (e.target === menu) {
             closeMenu();
         }
     });
 
-    // Close on Escape key
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && menu.classList.contains('active')) {
             closeMenu();
