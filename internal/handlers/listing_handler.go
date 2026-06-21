@@ -23,48 +23,68 @@ import (
 // ListingHandler handles all listing HTTP endpoints.
 type ListingHandler struct {
 	listings *repo.ListingRepo
+	render   Renderer
 }
 
 // NewListingHandler creates a ListingHandler.
-func NewListingHandler(listings *repo.ListingRepo) *ListingHandler {
-	return &ListingHandler{listings: listings}
+func NewListingHandler(listings *repo.ListingRepo, render Renderer) *ListingHandler {
+	return &ListingHandler{
+		listings: listings,
+		render:   render,
+	}
 }
 
-// HandleHome serves the homepage.
-// Returns JSON stub — replaced with template in Session 010.
+// pageData builds the standard template data map.
+func (h *ListingHandler) pageData(r *http.Request, title string, extra map[string]any) map[string]any {
+	data := map[string]any{
+		"Meta": map[string]string{
+			"Title":       title,
+			"Description": "Tierra y casas en los Valles Centrales de Oaxaca",
+		},
+		"User":  middleware.UserFromContext(r.Context()),
+		"Flash": nil,
+	}
+	for k, v := range extra {
+		data[k] = v
+	}
+	return data
+}
+
+// HandleHome serves the homepage with featured listings.
 func (h *ListingHandler) HandleHome(w http.ResponseWriter, r *http.Request) {
-	respond(w, http.StatusOK, map[string]string{"page": "home"})
+	filter := repo.ListFilter{Page: 1, PageSize: 6}
+	listings, _, err := h.listings.List(r.Context(), filter)
+	if err != nil {
+		slog.Error("failed to load homepage listings", "error", err)
+		listings = nil
+	}
+
+	h.render.Render(w, r, "home.tmpl", h.pageData(r, "", map[string]any{
+		"Listings": listings,
+	}))
 }
 
 // HandleListListings returns active listings with optional filters.
-// Query params: municipality, property_type, min_price, max_price, page, page_size
 func (h *ListingHandler) HandleListListings(w http.ResponseWriter, r *http.Request) {
-	filter := repo.ListFilter{
-		Page:     1,
-		PageSize: 20,
-	}
+	filter := repo.ListFilter{Page: 1, PageSize: 20}
 
 	if v := r.URL.Query().Get("municipality"); v != "" {
 		filter.Municipality = &v
 	}
-
 	if v := r.URL.Query().Get("property_type"); v != "" {
 		pt := models.PropertyType(v)
 		filter.PropertyType = &pt
 	}
-
 	if v := r.URL.Query().Get("min_price"); v != "" {
 		if f, err := strconv.ParseFloat(v, 64); err == nil && f > 0 {
 			filter.MinPrice = &f
 		}
 	}
-
 	if v := r.URL.Query().Get("max_price"); v != "" {
 		if f, err := strconv.ParseFloat(v, 64); err == nil && f > 0 {
 			filter.MaxPrice = &f
 		}
 	}
-
 	if v := r.URL.Query().Get("page"); v != "" {
 		if i, err := strconv.Atoi(v); err == nil && i > 0 {
 			filter.Page = i
@@ -87,7 +107,6 @@ func (h *ListingHandler) HandleListListings(w http.ResponseWriter, r *http.Reque
 }
 
 // HandleGetListing returns a single listing by slug.
-// Increments view count on every public load.
 func (h *ListingHandler) HandleGetListing(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 	if slug == "" {
@@ -106,14 +125,12 @@ func (h *ListingHandler) HandleGetListing(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Only public listings visible to unauthenticated users
 	user := middleware.UserFromContext(r.Context())
 	if !listing.IsPublic() && (user == nil || !listing.IsOwnedBy(user.ID)) {
 		respondError(w, http.StatusNotFound, "listing not found")
 		return
 	}
 
-	// Load media
 	media, err := h.listings.GetMedia(r.Context(), listing.ID)
 	if err != nil {
 		slog.Warn("failed to load listing media", "listing_id", listing.ID, "error", err)
@@ -121,8 +138,6 @@ func (h *ListingHandler) HandleGetListing(w http.ResponseWriter, r *http.Request
 		listing.Media = media
 	}
 
-	// Increment view count — fire and forget, non-fatal.
-	// Uses context.Background() — request context may cancel before goroutine runs.
 	go func(ctx context.Context, id uuid.UUID) {
 		if err := h.listings.IncrementViewCount(ctx, id); err != nil {
 			slog.Warn("failed to increment view count", "listing_id", id, "error", err)
@@ -133,13 +148,11 @@ func (h *ListingHandler) HandleGetListing(w http.ResponseWriter, r *http.Request
 }
 
 // HandleNewListingPage serves the create listing form.
-// Returns JSON stub — replaced with template in Session 010.
 func (h *ListingHandler) HandleNewListingPage(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, map[string]string{"page": "new listing"})
 }
 
 // HandleCreateListing creates a new listing in draft status.
-// ADR-004: title, property_type, price_mxn, municipality required.
 func (h *ListingHandler) HandleCreateListing(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
@@ -173,17 +186,14 @@ func (h *ListingHandler) HandleCreateListing(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Validate property type against canonical vocabulary — ADR-005
 	pt := models.PropertyType(propertyType)
 	switch pt {
 	case models.TypeLand, models.TypeHouse, models.TypeRancho, models.TypeCommercial, models.TypeCabin:
-		// valid
 	default:
 		respondError(w, http.StatusBadRequest, "invalid property_type")
 		return
 	}
 
-	// Generate slug from title — collision-safe
 	slug := generateSlug(title)
 	slug, err = h.ensureUniqueSlug(r, slug)
 	if err != nil {
@@ -218,8 +228,7 @@ func (h *ListingHandler) HandleCreateListing(w http.ResponseWriter, r *http.Requ
 		"slug", listing.Slug,
 	)
 
-	// Session 010: replace with http.Redirect(w, r, "/listings/"+listing.Slug+"/edit", http.StatusSeeOther)
-	respond(w, http.StatusCreated, listing)
+	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }
 
 // HandleDashboard returns all listings owned by the current user.
@@ -245,7 +254,6 @@ func (h *ListingHandler) HandleDashboard(w http.ResponseWriter, r *http.Request)
 }
 
 // HandleDeleteListing archives a listing (soft delete).
-// Only the owner or admin can delete.
 func (h *ListingHandler) HandleDeleteListing(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
@@ -265,7 +273,6 @@ func (h *ListingHandler) HandleDeleteListing(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Ownership check — only owner or admin can delete
 	if !listing.IsOwnedBy(user.ID) && !user.IsAdmin() {
 		respondError(w, http.StatusForbidden, "insufficient permissions")
 		return
@@ -279,12 +286,10 @@ func (h *ListingHandler) HandleDeleteListing(w http.ResponseWriter, r *http.Requ
 
 	slog.Info("listing archived", "listing_id", listing.ID, "owner_id", user.ID)
 
-	// Session 010: replace with http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
-	respond(w, http.StatusOK, map[string]string{"message": "listing deleted"})
+	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }
 
 // generateSlug creates a URL-safe slug from a title.
-// Lowercase, spaces to hyphens, strips special characters.
 func generateSlug(title string) string {
 	slug := strings.ToLower(strings.TrimSpace(title))
 
@@ -300,7 +305,6 @@ func generateSlug(title string) string {
 		}
 	}
 
-	// Collapse multiple hyphens
 	s := result.String()
 	for strings.Contains(s, "--") {
 		s = strings.ReplaceAll(s, "--", "-")

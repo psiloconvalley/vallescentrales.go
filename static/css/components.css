@@ -1,21 +1,30 @@
-/* components.css — Cards, buttons, forms, badges, status */
+/* components.css — Standardized components */
+/* All inputs, buttons, cards follow auth.css standards */
 
-/* Buttons — obsidian green, jewel-like */
+/* Buttons — 52px, confident, layered shadow */
 .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: var(--s1);
-    padding: 12px var(--s3);
-    font-size: 0.875rem;
-    font-weight: 600;
+    height: 52px;
+    padding: 0 var(--s3);
+    font-size: 1rem;
+    font-weight: 700;
     border-radius: var(--radius);
     transition: all 0.2s ease;
     letter-spacing: 0.01em;
-    box-shadow: var(--shadow);
+    box-shadow:
+        0 1px 3px rgba(0,0,0,0.06),
+        0 2px 8px rgba(0,0,0,0.04);
 }
-.btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
-.btn:active { transform: translateY(0); box-shadow: var(--shadow); }
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow:
+        0 2px 6px rgba(0,0,0,0.10),
+        0 8px 20px rgba(0,0,0,0.06);
+}
+.btn:active { transform: translateY(0); }
 
 .btn-primary {
     background: var(--obsidian-green);
@@ -38,39 +47,105 @@
 .btn-secondary {
     background: var(--surface);
     color: var(--text);
-    border: 1px solid var(--border);
+    border: 2px solid var(--border);
     box-shadow: none;
 }
-.btn-secondary:hover { background: var(--bg); box-shadow: var(--shadow); }
+.btn-secondary:hover {
+    background: var(--bg);
+    border-color: var(--text-light);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
 
 .btn-whatsapp { background: #25D366; color: white; }
 .btn-whatsapp:hover { background: #1DA851; color: white; }
 .btn-danger { background: var(--error); color: white; }
-.btn-sm  { padding: 8px var(--s2); font-size: 0.8125rem; }
-.btn-lg  { padding: 16px var(--s4); font-size: 1rem; }
+
+.btn-sm { height: 40px; padding: 0 var(--s2); font-size: 0.875rem; }
+.btn-lg { height: 56px; padding: 0 var(--s4); font-size: 1.0625rem; }
 .btn-block { width: 100%; }
 
-/* Listing card */
+/* Forms — 52px inputs, 2px borders */
+.form-group { margin-bottom: var(--s3); }
+
+.form-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    letter-spacing: 0.02em;
+}
+
+.form-input, .form-select, .form-textarea {
+    width: 100%;
+    height: 52px;
+    padding: 0 var(--s2);
+    font-size: 1rem;
+    color: var(--text);
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.form-input::placeholder,
+.form-select::placeholder,
+.form-textarea::placeholder {
+    color: var(--text-light);
+    font-weight: 400;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--obsidian-green);
+    background: var(--surface);
+    box-shadow: 0 0 0 4px rgba(47,79,58,0.10);
+}
+
+.form-textarea {
+    height: auto;
+    min-height: 120px;
+    padding: var(--s2);
+    resize: vertical;
+}
+
+.form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    padding-right: 44px;
+}
+
+/* Listing card — consistent with container standards */
 .listing-card {
     background: var(--surface);
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
     overflow: hidden;
-    box-shadow: var(--shadow);
+    box-shadow:
+        0 0 0 1px rgba(0,0,0,0.03),
+        0 2px 8px rgba(0,0,0,0.04);
     transition: all 0.25s ease;
     border: 1px solid var(--border);
 }
+
 .listing-card:hover {
-    box-shadow: var(--shadow-lg);
+    box-shadow:
+        0 0 0 1px rgba(0,0,0,0.03),
+        0 8px 32px rgba(0,0,0,0.10);
     transform: translateY(-4px);
     border-color: transparent;
 }
+
 .listing-card-image {
     width: 100%;
     height: 240px;
     object-fit: cover;
     background: linear-gradient(135deg, #E8E8E4 0%, #F0F0EC 50%, #E0E0DC 100%);
 }
-.listing-card-body  { padding: var(--s3); }
+
+.listing-card-body { padding: var(--s3); }
+
 .listing-card-price {
     font-family: var(--font-mono);
     font-size: 1.375rem;
@@ -78,6 +153,7 @@
     color: var(--obsidian);
     letter-spacing: -0.02em;
 }
+
 .listing-card-title {
     font-size: 1.0625rem;
     font-weight: 600;
@@ -85,7 +161,11 @@
 }
 .listing-card-title a { color: var(--text); }
 .listing-card-title a:hover { color: var(--accent); }
-.listing-card-location { font-size: 0.8125rem; color: var(--text-muted); }
+
+.listing-card-location {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+}
 
 /* Badges — pill */
 .badge {
@@ -105,37 +185,15 @@
 .badge-cabin      { background: #F0EDE8; color: #6B6B5A; }
 
 /* Status — pill */
-.status { font-size: 0.6875rem; font-weight: 700; padding: 4px 12px; border-radius: var(--radius-full); letter-spacing: 0.04em; }
+.status {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+    letter-spacing: 0.04em;
+}
 .status-draft          { background: #F3F3F3; color: #888; }
 .status-active         { background: #EBF5EC; color: var(--sage); }
 .status-under_contract { background: #FFF8E1; color: #B8860B; }
 .status-sold           { background: #E8F5E9; color: #2E7D32; }
 .status-archived       { background: #F5F5F5; color: #AAA; }
-
-/* Forms */
-.form-group { margin-bottom: var(--s3); }
-.form-label {
-    display: block;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-.form-input, .form-select, .form-textarea {
-    width: 100%;
-    padding: 12px var(--s2);
-    font-size: 0.9375rem;
-    color: var(--text);
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius-sm);
-    transition: border-color 0.15s, box-shadow 0.15s;
-}
-.form-input:focus, .form-select:focus, .form-textarea:focus {
-    outline: none;
-    border-color: var(--obsidian-green);
-    box-shadow: 0 0 0 3px rgba(47,79,58,0.12);
-}
-.form-textarea { resize: vertical; min-height: 120px; }

@@ -1,7 +1,5 @@
 // internal/handlers/helpers.go
-// Shared HTTP response helpers for all handlers.
-// respond and respondError are the only ways to write JSON.
-// render is the only way to write HTML templates (wired in Session 010).
+// Shared HTTP response helpers and renderer interface.
 
 package handlers
 
@@ -12,8 +10,14 @@ import (
 	"time"
 )
 
+// Renderer is the interface for rendering HTML templates.
+// app.TemplateRenderer satisfies this interface.
+// Defined here to avoid handlers importing the app package.
+type Renderer interface {
+	Render(w http.ResponseWriter, r *http.Request, name string, data any)
+}
+
 // respond writes a JSON response with the given status code and data.
-// Every handler uses this. Never write JSON manually.
 func respond(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

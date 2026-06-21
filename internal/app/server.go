@@ -107,7 +107,7 @@ func (s *Server) mountRoutes() {
 		r.Use(s.authMW.LoadUser)
 
 		// PUBLIC
-		r.Get("/", s.handleHome)
+		r.Get("/", s.listingH.HandleHome)
 		r.Get("/listings", s.listingH.HandleListListings)
 		r.Get("/listings/{slug}", s.listingH.HandleGetListing)
 
@@ -134,22 +134,6 @@ func (s *Server) mountRoutes() {
 			r.Post("/listings/{slug}/photos", s.handleUploadPhotos)
 		})
 	})
-}
-
-func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
-	user := appmiddleware.UserFromContext(r.Context())
-
-	data := map[string]any{
-		"Meta": map[string]string{
-			"Title":       "",
-			"Description": "Tierra y casas en los Valles Centrales de Oaxaca",
-		},
-		"User":     user,
-		"Listings": nil,
-		"Flash":    nil,
-	}
-
-	s.tmpl.Render(w, r, "home.tmpl", data)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
