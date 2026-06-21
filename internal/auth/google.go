@@ -3,7 +3,7 @@
 // Improved from psiloconvalley reference:
 //   → Config injected via struct, not global var
 //   → slog throughout
-//   → SameSite=Strict on state cookie
+//   → SameSite=Lax on state cookie (required for OAuth cross-site redirects)
 //   → Validates token expiry
 //   → Secure flag from config, not env check
 
@@ -24,10 +24,10 @@ import (
 )
 
 const (
-	oauthStateCookie   = "__vc_oauth_state"
-	stateTokenBytes    = 32
-	stateCookieMaxAge  = 300
-	googleUserInfoURL  = "https://www.googleapis.com/oauth2/v2/userinfo"
+	oauthStateCookie     = "__vc_oauth_state"
+	stateTokenBytes      = 32
+	stateCookieMaxAge    = 300
+	googleUserInfoURL    = "https://www.googleapis.com/oauth2/v2/userinfo"
 	tokenExchangeTimeout = 10 * time.Second
 )
 
@@ -154,6 +154,7 @@ func (g *GoogleOAuth) fetchUser(ctx context.Context, token *oauth2.Token) (*Goog
 }
 
 // setStateCookie writes the CSRF state cookie.
+// SameSite=Lax is required for OAuth flows — Strict blocks the callback redirect.
 func (g *GoogleOAuth) setStateCookie(w http.ResponseWriter, state string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     oauthStateCookie,
@@ -162,7 +163,7 @@ func (g *GoogleOAuth) setStateCookie(w http.ResponseWriter, state string) {
 		MaxAge:   stateCookieMaxAge,
 		HttpOnly: true,
 		Secure:   g.secure,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 	})
 }
 
@@ -183,7 +184,6 @@ func (g *GoogleOAuth) verifyStateCookie(r *http.Request, state string) bool {
 		if len(gotPrefix) > 8 {
 			gotPrefix = gotPrefix[:8]
 		}
-
 		slog.Warn("oauth state mismatch",
 			"expected_prefix", expectedPrefix,
 			"got_prefix", gotPrefix,
