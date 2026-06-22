@@ -42,14 +42,12 @@
             </svg>
         </a>
 
-        <!-- Hamburger button — mobile only -->
         <button class="nav-hamburger" id="navToggle" aria-label="Open menu" aria-expanded="false">
             <span class="hamburger-line"></span>
             <span class="hamburger-line"></span>
             <span class="hamburger-line"></span>
         </button>
 
-        <!-- Nav links — overlay on mobile, inline on desktop -->
         <div class="nav-menu" id="navMenu">
             <button class="nav-close" id="navClose" aria-label="Close menu">✕</button>
             <ul class="nav-links">
@@ -59,6 +57,7 @@
                     <li><a href="/listings/new" class="nav-cta">+ Publicar</a></li>
                     <li>
                         <form method="POST" action="/auth/logout" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
                             <button type="submit" class="nav-logout-btn">Salir</button>
                         </form>
                     </li>

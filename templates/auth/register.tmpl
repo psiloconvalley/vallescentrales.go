@@ -7,6 +7,7 @@
     {{end}}
 
     <form method="POST" action="/auth/register" autocomplete="on" novalidate>
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
         <div class="form-group">
             <label class="form-label" for="full_name">Nombre Completo</label>
             <input class="form-input" type="text" id="full_name" name="full_name"

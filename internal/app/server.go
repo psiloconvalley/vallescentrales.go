@@ -1,6 +1,6 @@
 // internal/app/server.go
 // Router wiring, security middleware, auth-aware route groups,
-// and graceful shutdown.
+// CSRF protection, rate limiting, and graceful shutdown.
 
 package app
 
@@ -98,12 +98,19 @@ func (s *Server) mountMiddleware() {
 }
 
 func (s *Server) mountRoutes() {
+	// Health check — no auth, no CSRF
 	s.router.Get("/health", s.handleHealth)
 
+	// Static files — no auth, no CSRF
 	s.router.Handle("/static/*", http.StripPrefix("/static/",
 		http.FileServer(http.Dir("static"))))
 
+	// Rate limiter for auth endpoints — 10 requests per minute per IP
+	authLimiter := appmiddleware.NewRateLimiter(10, time.Minute)
+
+	// Application routes — CSRF + LoadUser
 	s.router.Group(func(r chi.Router) {
+		r.Use(appmiddleware.CSRFProtect(s.cfg.IsProduction()))
 		r.Use(s.authMW.LoadUser)
 
 		// PUBLIC
@@ -111,16 +118,20 @@ func (s *Server) mountRoutes() {
 		r.Get("/listings", s.listingH.HandleListListings)
 		r.Get("/listings/{slug}", s.listingH.HandleGetListing)
 
-		// AUTH — email
-		r.Get("/auth/login", s.authH.HandleLoginPage)
-		r.Post("/auth/login", s.authH.HandleLogin)
-		r.Get("/auth/register", s.authH.HandleRegisterPage)
-		r.Post("/auth/register", s.authH.HandleRegister)
-		r.Post("/auth/logout", s.authH.HandleLogout)
+		// AUTH — rate limited
+		r.Group(func(r chi.Router) {
+			r.Use(authLimiter.Limit)
 
-		// AUTH — Google OAuth
-		r.Get("/auth/google", s.authH.HandleGoogleLogin)
-		r.Get("/auth/google/callback", s.authH.HandleGoogleCallback)
+			r.Get("/auth/login", s.authH.HandleLoginPage)
+			r.Post("/auth/login", s.authH.HandleLogin)
+			r.Get("/auth/register", s.authH.HandleRegisterPage)
+			r.Post("/auth/register", s.authH.HandleRegister)
+			r.Post("/auth/logout", s.authH.HandleLogout)
+
+			// Google OAuth
+			r.Get("/auth/google", s.authH.HandleGoogleLogin)
+			r.Get("/auth/google/callback", s.authH.HandleGoogleCallback)
+		})
 
 		// PROTECTED
 		r.Group(func(r chi.Router) {
@@ -229,6 +240,14 @@ func (s *Server) securityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		w.Header().Set("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+		w.Header().Set("Content-Security-Policy",
+			"default-src 'self'; "+
+				"script-src 'self'; "+
+				"style-src 'self' 'unsafe-inline'; "+
+				"img-src 'self' data: https:; "+
+				"font-src 'self'; "+
+				"connect-src 'self'; "+
+				"frame-ancestors 'none'")
 		if s.cfg.IsProduction() {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}

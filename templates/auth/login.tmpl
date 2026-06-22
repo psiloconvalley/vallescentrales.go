@@ -7,6 +7,7 @@
     {{end}}
 
     <form method="POST" action="/auth/login" autocomplete="on" novalidate>
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
         <div class="form-group">
             <label class="form-label" for="email">Correo Electrónico</label>
             <input class="form-input" type="email" id="email" name="email"

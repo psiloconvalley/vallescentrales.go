@@ -39,15 +39,15 @@ func (h *AuthHandler) GoogleEnabled() bool {
 }
 
 // renderPage renders an HTML template with all required data injected.
-// NeedsAuthJS is always true for auth pages — loads password/strength JS.
 func (h *AuthHandler) renderPage(w http.ResponseWriter, r *http.Request, tmpl string, data map[string]any) {
 	if data == nil {
 		data = make(map[string]any)
 	}
 
-	data["User"]         = middleware.UserFromContext(r.Context())
+	data["User"]          = middleware.UserFromContext(r.Context())
 	data["GoogleEnabled"] = h.GoogleEnabled()
-	data["NeedsAuthJS"]  = true
+	data["NeedsAuthJS"]   = true
+	data["CSRFToken"]     = middleware.CSRFToken(r)
 
 	if data["Meta"] == nil {
 		data["Meta"] = map[string]string{"Title": "", "Description": ""}

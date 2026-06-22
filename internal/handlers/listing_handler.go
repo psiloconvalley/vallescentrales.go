@@ -41,8 +41,9 @@ func (h *ListingHandler) pageData(r *http.Request, title string, extra map[strin
 			"Title":       title,
 			"Description": "Tierra y casas en los Valles Centrales de Oaxaca",
 		},
-		"User":  middleware.UserFromContext(r.Context()),
-		"Flash": nil,
+		"User":      middleware.UserFromContext(r.Context()),
+		"Flash":     nil,
+		"CSRFToken": middleware.CSRFToken(r),
 	}
 	for k, v := range extra {
 		data[k] = v
