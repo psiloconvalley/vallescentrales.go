@@ -1,7 +1,7 @@
 // internal/auth/session.go
 // Session lifecycle: create, load, destroy.
 // ADR-003: server-side sessions backed by PostgreSQL.
-// Security: httpOnly, SameSite=Strict, Secure in production.
+// Security: httpOnly, SameSite=Lax, Secure in production.
 
 package auth
 
@@ -137,7 +137,7 @@ func (sm *SessionManager) Destroy(ctx context.Context, w http.ResponseWriter, r 
 		MaxAge:   -1,
 		HttpOnly: true,
 		Secure:   sm.secure,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 	})
 
 	slog.Info("session destroyed")
@@ -148,7 +148,7 @@ func (sm *SessionManager) Destroy(ctx context.Context, w http.ResponseWriter, r 
 // setCookie writes the session cookie to the HTTP response.
 // httpOnly:  JS cannot read it — XSS cannot steal sessions
 // Secure:    HTTPS only in production
-// SameSite:  Strict — CSRF protection at cookie level
+// SameSite:  Lax — CSRF protection via nosurf tokens
 func (sm *SessionManager) setCookie(w http.ResponseWriter, sessionID string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     SessionCookieName,
@@ -157,7 +157,7 @@ func (sm *SessionManager) setCookie(w http.ResponseWriter, sessionID string) {
 		MaxAge:   int((30 * 24 * time.Hour).Seconds()),
 		HttpOnly: true,
 		Secure:   sm.secure,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 	})
 }
 

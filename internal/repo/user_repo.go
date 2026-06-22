@@ -32,6 +32,8 @@ func NewUserRepo(db *pgxpool.Pool) *UserRepo {
 }
 
 // userColumns is the canonical column list for all user queries.
+// SECURITY: This constant is hardcoded — never contains user input.
+// It is safe to use with fmt.Sprintf in SQL queries.
 // Order must match scanUser exactly.
 const userColumns = `
 	id, email, password_hash, full_name, phone, whatsapp,
