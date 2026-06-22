@@ -36,6 +36,7 @@ type Server struct {
 	authH     *handlers.AuthHandler
 	listingH  *handlers.ListingHandler
 	profileH  *handlers.ProfileHandler
+	passkeyH  *handlers.PasskeyHandler
 }
 
 func NewServer(
@@ -45,6 +46,7 @@ func NewServer(
 	authH *handlers.AuthHandler,
 	listingH *handlers.ListingHandler,
 	profileH *handlers.ProfileHandler,
+	passkeyH *handlers.PasskeyHandler,
 	tmpl *TemplateRenderer,
 ) (*Server, error) {
 	if authMW == nil {
@@ -58,6 +60,9 @@ func NewServer(
 	}
 	if profileH == nil {
 		return nil, fmt.Errorf("server: profile handler is required")
+	}
+	if passkeyH == nil {
+		return nil, fmt.Errorf("server: passkey handler is required")
 	}
 	if tmpl == nil {
 		return nil, fmt.Errorf("server: template renderer is required")
@@ -85,6 +90,7 @@ func NewServer(
 		authH:    authH,
 		listingH: listingH,
 		profileH: profileH,
+		passkeyH: passkeyH,
 	}
 
 	s.mountMiddleware()
@@ -130,6 +136,10 @@ func (s *Server) mountRoutes() {
 			r.Post("/auth/logout", s.authH.HandleLogout)
 			r.Get("/auth/google", s.authH.HandleGoogleLogin)
 			r.Get("/auth/google/callback", s.authH.HandleGoogleCallback)
+
+			// Passkey login — public (no auth required)
+			r.Post("/auth/passkey/login/begin", s.passkeyH.HandleLoginBegin)
+			r.Post("/auth/passkey/login/finish", s.passkeyH.HandleLoginFinish)
 		})
 
 		// PROTECTED
@@ -142,6 +152,11 @@ func (s *Server) mountRoutes() {
 			// Profile
 			r.Get("/dashboard/profile", s.profileH.HandleProfileEditPage)
 			r.Post("/dashboard/profile", s.profileH.HandleProfileSave)
+
+			// Passkey management — must be logged in
+			r.Post("/auth/passkey/register/begin", s.passkeyH.HandleRegisterBegin)
+			r.Post("/auth/passkey/register/finish", s.passkeyH.HandleRegisterFinish)
+			r.Delete("/auth/passkey/{id}", s.passkeyH.HandleDeletePasskey)
 
 			// Listings management
 			r.Get("/listings/new", s.listingH.HandleNewListingPage)

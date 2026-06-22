@@ -1,7 +1,8 @@
 /* components.css — Standardized components */
-/* All inputs, buttons, cards follow auth.css standards */
+/* ALL buttons: font-body, 600 weight, 0.9375rem */
+/* ALL inputs:  font-body, 400 weight, 0.9375rem */
 
-/* Buttons — 52px, confident, layered shadow */
+/* ─── Buttons ─── */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -9,8 +10,9 @@
     gap: var(--s1);
     height: 52px;
     padding: 0 var(--s3);
-    font-size: 1rem;
-    font-weight: 700;
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    font-weight: 600;
     border-radius: var(--radius);
     transition: all 0.2s ease;
     letter-spacing: 0.01em;
@@ -26,22 +28,13 @@
 }
 .btn:active { transform: translateY(0); }
 
-.btn-primary {
-    background: var(--obsidian-green);
-    color: white;
-}
+.btn-primary   { background: var(--obsidian-green); color: white; }
 .btn-primary:hover { background: var(--obsidian-hover); color: white; }
 
-.btn-accent {
-    background: var(--accent);
-    color: white;
-}
+.btn-accent    { background: var(--accent); color: white; }
 .btn-accent:hover { background: var(--accent-dark); color: white; }
 
-.btn-dark {
-    background: var(--obsidian);
-    color: white;
-}
+.btn-dark      { background: var(--obsidian); color: white; }
 .btn-dark:hover { background: var(--obsidian-light); color: white; }
 
 .btn-secondary {
@@ -56,19 +49,20 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
-.btn-whatsapp { background: #25D366; color: white; }
+.btn-whatsapp  { background: #25D366; color: white; }
 .btn-whatsapp:hover { background: #1DA851; color: white; }
-.btn-danger { background: var(--error); color: white; }
+.btn-danger    { background: var(--error); color: white; }
 
-.btn-sm { height: 40px; padding: 0 var(--s2); font-size: 0.875rem; }
-.btn-lg { height: 56px; padding: 0 var(--s4); font-size: 1.0625rem; }
+.btn-sm  { height: 40px; padding: 0 var(--s2); font-size: 0.8125rem; }
+.btn-lg  { height: 56px; padding: 0 var(--s4); }
 .btn-block { width: 100%; }
 
-/* Forms — 52px inputs, 2px borders */
+/* ─── Forms ─── */
 .form-group { margin-bottom: var(--s3); }
 
 .form-label {
     display: block;
+    font-family: var(--font-body);
     font-size: 0.8125rem;
     font-weight: 700;
     color: var(--text);
@@ -80,7 +74,9 @@
     width: 100%;
     height: 52px;
     padding: 0 var(--s2);
-    font-size: 1rem;
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    font-weight: 400;
     color: var(--text);
     background: var(--bg);
     border: 2px solid var(--border);
@@ -117,7 +113,14 @@
     padding-right: 44px;
 }
 
-/* Listing card — consistent with container standards */
+.form-hint {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--text-light);
+    margin-top: 6px;
+}
+
+/* ─── Listing Card ─── */
 .listing-card {
     background: var(--surface);
     border-radius: var(--radius-lg);
@@ -128,7 +131,6 @@
     transition: all 0.25s ease;
     border: 1px solid var(--border);
 }
-
 .listing-card:hover {
     box-shadow:
         0 0 0 1px rgba(0,0,0,0.03),
@@ -136,16 +138,13 @@
     transform: translateY(-4px);
     border-color: transparent;
 }
-
 .listing-card-image {
     width: 100%;
     height: 240px;
     object-fit: cover;
     background: linear-gradient(135deg, #E8E8E4 0%, #F0F0EC 50%, #E0E0DC 100%);
 }
-
 .listing-card-body { padding: var(--s3); }
-
 .listing-card-price {
     font-family: var(--font-mono);
     font-size: 1.375rem;
@@ -153,23 +152,24 @@
     color: var(--obsidian);
     letter-spacing: -0.02em;
 }
-
 .listing-card-title {
-    font-size: 1.0625rem;
+    font-family: var(--font-body);
+    font-size: 1rem;
     font-weight: 600;
     margin: var(--s1) 0 4px;
 }
 .listing-card-title a { color: var(--text); }
 .listing-card-title a:hover { color: var(--accent); }
-
 .listing-card-location {
     font-size: 0.8125rem;
+    font-weight: 400;
     color: var(--text-muted);
 }
 
-/* Badges — pill */
+/* ─── Badges ─── */
 .badge {
     display: inline-block;
+    font-family: var(--font-body);
     font-size: 0.6875rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -184,8 +184,9 @@
 .badge-commercial { background: #ECEEF5; color: #555B7A; }
 .badge-cabin      { background: #F0EDE8; color: #6B6B5A; }
 
-/* Status — pill */
+/* ─── Status ─── */
 .status {
+    font-family: var(--font-body);
     font-size: 0.6875rem;
     font-weight: 700;
     padding: 4px 12px;
@@ -198,16 +199,17 @@
 .status-sold           { background: #E8F5E9; color: #2E7D32; }
 .status-archived       { background: #F5F5F5; color: #AAA; }
 
-/* Flash messages — component, appears on any page */
+/* ─── Flash Messages ─── */
 .flash {
     padding: var(--s2) var(--s3);
     border-radius: var(--radius);
     margin-bottom: var(--s3);
+    font-family: var(--font-body);
     font-size: 0.875rem;
     font-weight: 600;
     animation: flashIn 0.3s ease;
 }
-.flash-error   {
+.flash-error {
     background: var(--error-bg);
     color: var(--error);
     border: 2px solid rgba(220,53,69,0.15);

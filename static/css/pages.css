@@ -171,3 +171,22 @@
     border: 1px solid var(--border);
     overflow: hidden;
 }
+
+/* Dashboard table cells */
+.td-title {
+    font-weight: 600;
+    color: var(--obsidian);
+}
+
+.td-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* Auth badge inline icon */
+.auth-badge svg {
+    display: inline;
+    vertical-align: middle;
+    margin-right: 4px;
+}

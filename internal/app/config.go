@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -26,6 +27,11 @@ type Config struct {
 	GoogleClientID     string
 	GoogleClientSecret string
 	GoogleRedirectURL  string
+
+	// WebAuthn / Passkeys (optional — app works without it)
+	WebAuthnRPID          string
+	WebAuthnRPDisplayName string
+	WebAuthnOrigins       []string
 
 	// Storage (Cloudflare R2 — configured later)
 	R2AccountID string
@@ -64,15 +70,23 @@ func LoadConfig() (*Config, error) {
 	}
 
 	// Optional — Google OAuth
-	cfg.GoogleClientID = getEnv("GOOGLE_CLIENT_ID", "")
+	cfg.GoogleClientID     = getEnv("GOOGLE_CLIENT_ID", "")
 	cfg.GoogleClientSecret = getEnv("GOOGLE_CLIENT_SECRET", "")
-	cfg.GoogleRedirectURL = getEnv("GOOGLE_REDIRECT_URL", "")
+	cfg.GoogleRedirectURL  = getEnv("GOOGLE_REDIRECT_URL", "")
+
+	// Optional — WebAuthn
+	// WEBAUTHN_RP_ID:      the domain (e.g. vallescentrales.com)
+	// WEBAUTHN_ORIGINS:    comma-separated origins (e.g. https://vallescentrales.com)
+	cfg.WebAuthnRPID          = getEnv("WEBAUTHN_RP_ID", "localhost")
+	cfg.WebAuthnRPDisplayName = getEnv("WEBAUTHN_RP_DISPLAY_NAME", "Valles Centrales")
+	originsStr               := getEnv("WEBAUTHN_ORIGINS", "http://localhost:8080")
+	cfg.WebAuthnOrigins        = splitAndTrim(originsStr)
 
 	// Optional — Storage
 	cfg.R2AccountID = getEnv("R2_ACCOUNT_ID", "")
 	cfg.R2AccessKey = getEnv("R2_ACCESS_KEY", "")
 	cfg.R2SecretKey = getEnv("R2_SECRET_KEY", "")
-	cfg.R2Bucket = getEnv("R2_BUCKET", "")
+	cfg.R2Bucket    = getEnv("R2_BUCKET", "")
 	cfg.R2PublicURL = getEnv("R2_PUBLIC_URL", "")
 
 	return cfg, nil
@@ -91,6 +105,11 @@ func (c *Config) GoogleOAuthEnabled() bool {
 	return c.GoogleClientID != ""
 }
 
+// PasskeysEnabled returns true if WebAuthn is configured.
+func (c *Config) PasskeysEnabled() bool {
+	return c.WebAuthnRPID != ""
+}
+
 func getEnv(key, fallback string) string {
 	if val, ok := os.LookupEnv(key); ok && val != "" {
 		return val
@@ -104,4 +123,17 @@ func requireEnv(key string) (string, bool) {
 		return "", false
 	}
 	return val, true
+}
+
+// splitAndTrim splits a comma-separated string and trims whitespace.
+func splitAndTrim(s string) []string {
+	parts := strings.Split(s, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	return result
 }
