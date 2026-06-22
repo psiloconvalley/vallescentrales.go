@@ -54,8 +54,9 @@ func main() {
 
 	authH    := handlers.NewAuthHandler(userRepo, sessionMgr, googleAuth, tmpl)
 	listingH := handlers.NewListingHandler(listingRepo, tmpl)
+	profileH := handlers.NewProfileHandler(userRepo, tmpl)
 
-	server, err := app.NewServer(cfg, db, authMW, authH, listingH, tmpl)
+	server, err := app.NewServer(cfg, db, authMW, authH, listingH, profileH, tmpl)
 	if err != nil {
 		slog.Error("failed to build server", "error", err)
 		os.Exit(1)

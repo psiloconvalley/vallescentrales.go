@@ -27,14 +27,15 @@ const (
 )
 
 type Server struct {
-	cfg      *Config
-	db       *pgxpool.Pool
-	router   *chi.Mux
-	logger   *slog.Logger
-	tmpl     *TemplateRenderer
-	authMW   *appmiddleware.AuthMiddleware
-	authH    *handlers.AuthHandler
-	listingH *handlers.ListingHandler
+	cfg       *Config
+	db        *pgxpool.Pool
+	router    *chi.Mux
+	logger    *slog.Logger
+	tmpl      *TemplateRenderer
+	authMW    *appmiddleware.AuthMiddleware
+	authH     *handlers.AuthHandler
+	listingH  *handlers.ListingHandler
+	profileH  *handlers.ProfileHandler
 }
 
 func NewServer(
@@ -43,6 +44,7 @@ func NewServer(
 	authMW *appmiddleware.AuthMiddleware,
 	authH *handlers.AuthHandler,
 	listingH *handlers.ListingHandler,
+	profileH *handlers.ProfileHandler,
 	tmpl *TemplateRenderer,
 ) (*Server, error) {
 	if authMW == nil {
@@ -53,6 +55,9 @@ func NewServer(
 	}
 	if listingH == nil {
 		return nil, fmt.Errorf("server: listing handler is required")
+	}
+	if profileH == nil {
+		return nil, fmt.Errorf("server: profile handler is required")
 	}
 	if tmpl == nil {
 		return nil, fmt.Errorf("server: template renderer is required")
@@ -79,6 +84,7 @@ func NewServer(
 		authMW:   authMW,
 		authH:    authH,
 		listingH: listingH,
+		profileH: profileH,
 	}
 
 	s.mountMiddleware()
@@ -98,17 +104,13 @@ func (s *Server) mountMiddleware() {
 }
 
 func (s *Server) mountRoutes() {
-	// Health check — no auth, no CSRF
 	s.router.Get("/health", s.handleHealth)
 
-	// Static files — no auth, no CSRF
 	s.router.Handle("/static/*", http.StripPrefix("/static/",
 		http.FileServer(http.Dir("static"))))
 
-	// Rate limiter for auth endpoints — 10 requests per minute per IP
 	authLimiter := appmiddleware.NewRateLimiter(10, time.Minute)
 
-	// Application routes — CSRF + LoadUser
 	s.router.Group(func(r chi.Router) {
 		r.Use(appmiddleware.CSRFProtect(s.cfg.IsProduction()))
 		r.Use(s.authMW.LoadUser)
@@ -121,14 +123,11 @@ func (s *Server) mountRoutes() {
 		// AUTH — rate limited
 		r.Group(func(r chi.Router) {
 			r.Use(authLimiter.Limit)
-
 			r.Get("/auth/login", s.authH.HandleLoginPage)
 			r.Post("/auth/login", s.authH.HandleLogin)
 			r.Get("/auth/register", s.authH.HandleRegisterPage)
 			r.Post("/auth/register", s.authH.HandleRegister)
 			r.Post("/auth/logout", s.authH.HandleLogout)
-
-			// Google OAuth
 			r.Get("/auth/google", s.authH.HandleGoogleLogin)
 			r.Get("/auth/google/callback", s.authH.HandleGoogleCallback)
 		})
@@ -136,7 +135,15 @@ func (s *Server) mountRoutes() {
 		// PROTECTED
 		r.Group(func(r chi.Router) {
 			r.Use(s.authMW.RequireAuth)
+
+			// Dashboard
 			r.Get("/dashboard", s.listingH.HandleDashboard)
+
+			// Profile
+			r.Get("/dashboard/profile", s.profileH.HandleProfileEditPage)
+			r.Post("/dashboard/profile", s.profileH.HandleProfileSave)
+
+			// Listings management
 			r.Get("/listings/new", s.listingH.HandleNewListingPage)
 			r.Post("/listings/new", s.listingH.HandleCreateListing)
 			r.Get("/listings/{slug}/edit", s.handleEditListingPage)

@@ -1,0 +1,9 @@
+{{define "profile_avatar"}}
+<div class="profile-avatar-wrap">
+    {{if .AvatarURL}}
+        <img src="{{.AvatarURL}}" alt="{{.DisplayNameOrFull}}" class="profile-avatar-img">
+    {{else}}
+        <div class="profile-avatar-initial">{{.InitialLetter}}</div>
+    {{end}}
+</div>
+{{end}}

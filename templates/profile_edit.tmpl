@@ -1,0 +1,219 @@
+{{define "content"}}
+<div class="container">
+    <div class="profile-edit-page">
+
+        <div class="page-header">
+            <h1>Editar Perfil</h1>
+            <p class="text-muted">Gestiona tu identidad en Valles Centrales</p>
+        </div>
+
+        {{if .Error}}
+        <div class="flash flash-error">{{.Error}}</div>
+        {{end}}
+
+        {{if .Success}}
+        <div class="flash flash-success">{{.Success}}</div>
+        {{end}}
+
+        <form method="POST" action="/dashboard/profile" novalidate>
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+            <!-- SECTION: Identity -->
+            <div class="profile-section">
+                <h2>Identidad</h2>
+
+                <div class="profile-avatar-edit">
+                    {{if .Profile.AvatarURL}}
+                        <img src="{{.Profile.AvatarURL}}" alt="" class="profile-avatar-img">
+                    {{else}}
+                        <div class="profile-avatar-initial">{{.Profile.InitialLetter}}</div>
+                    {{end}}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="display_name">Nombre para Mostrar</label>
+                    <input class="form-input" type="text" id="display_name" name="display_name"
+                           value="{{if .Profile.DisplayName}}{{.Profile.DisplayName}}{{end}}"
+                           placeholder="Cómo quieres que te vean">
+                    <div class="form-hint">Si no se establece, se usará tu nombre completo</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="username">Nombre de Usuario</label>
+                    <div class="form-input-wrap">
+                        <span class="form-input-prefix">@</span>
+                        <input class="form-input form-input-with-prefix" type="text" id="username" name="username"
+                               value="{{if .Profile.Username}}{{.Profile.Username}}{{end}}"
+                               placeholder="tuusuario" maxlength="30" autocomplete="off">
+                    </div>
+                    <div class="form-hint">Solo letras, números y guiones bajos. Mínimo 3 caracteres.</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="bio">Biografía</label>
+                    <textarea class="form-textarea" id="bio" name="bio"
+                              maxlength="160" rows="3"
+                              placeholder="Cuéntanos sobre ti o tu negocio...">{{if .Profile.Bio}}{{.Profile.Bio}}{{end}}</textarea>
+                    <div class="form-hint"><span id="bioCount">{{if .Profile.Bio}}{{len .Profile.Bio}}{{else}}0{{end}}</span>/160 caracteres</div>
+                </div>
+            </div>
+
+            <!-- SECTION: Contact & Professional -->
+            <div class="profile-section">
+                <h2>Contacto y Profesional</h2>
+
+                <div class="form-group">
+                    <label class="form-label" for="full_name">Nombre Completo</label>
+                    <input class="form-input" type="text" id="full_name" name="full_name"
+                           value="{{.Profile.FullName}}" required
+                           placeholder="Tu nombre legal">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="phone">Teléfono</label>
+                        <input class="form-input" type="tel" id="phone" name="phone"
+                               value="{{if .Profile.Phone}}{{.Profile.Phone}}{{end}}"
+                               placeholder="+52 951 123 4567">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="whatsapp">WhatsApp</label>
+                        <input class="form-input" type="tel" id="whatsapp" name="whatsapp"
+                               value="{{if .Profile.WhatsApp}}{{.Profile.WhatsApp}}{{end}}"
+                               placeholder="+52 951 123 4567">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="agency_name">Nombre de Agencia</label>
+                    <input class="form-input" type="text" id="agency_name" name="agency_name"
+                           value="{{if .Profile.AgencyName}}{{.Profile.AgencyName}}{{end}}"
+                           placeholder="Opcional — para agentes inmobiliarios">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="website">Sitio Web</label>
+                        <input class="form-input" type="url" id="website" name="website"
+                               value="{{if .Profile.Website}}{{.Profile.Website}}{{end}}"
+                               placeholder="https://tu-sitio.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="location">Ubicación</label>
+                        <input class="form-input" type="text" id="location" name="location"
+                               value="{{if .Profile.Location}}{{.Profile.Location}}{{end}}"
+                               placeholder="Oaxaca de Juárez">
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: Languages -->
+            <div class="profile-section">
+                <h2>Idiomas</h2>
+
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="languages" value="es"
+                               {{if .Profile.Languages}}{{range .Profile.Languages}}{{if eq . "es"}}checked{{end}}{{end}}{{end}}>
+                        <span>Español</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="languages" value="en"
+                               {{if .Profile.Languages}}{{range .Profile.Languages}}{{if eq . "en"}}checked{{end}}{{end}}{{end}}>
+                        <span>English</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="languages" value="zapotec"
+                               {{if .Profile.Languages}}{{range .Profile.Languages}}{{if eq . "zapotec"}}checked{{end}}{{end}}{{end}}>
+                        <span>Zapoteco</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="languages" value="mixtec"
+                               {{if .Profile.Languages}}{{range .Profile.Languages}}{{if eq . "mixtec"}}checked{{end}}{{end}}{{end}}>
+                        <span>Mixteco</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- SECTION: Privacy -->
+            <div class="profile-section">
+                <h2>Privacidad</h2>
+
+                <div class="toggle-group">
+                    <label class="toggle-label">
+                        <div>
+                            <div class="toggle-title">Mostrar teléfono</div>
+                            <div class="toggle-desc">Visible en tu perfil público y listados</div>
+                        </div>
+                        <input type="checkbox" name="show_phone" class="toggle-input"
+                               {{if .Profile.ShowPhone}}checked{{end}}>
+                        <span class="toggle-switch"></span>
+                    </label>
+
+                    <label class="toggle-label">
+                        <div>
+                            <div class="toggle-title">Mostrar WhatsApp</div>
+                            <div class="toggle-desc">Botón de contacto en tus propiedades</div>
+                        </div>
+                        <input type="checkbox" name="show_whatsapp" class="toggle-input"
+                               {{if .Profile.ShowWhatsApp}}checked{{end}}>
+                        <span class="toggle-switch"></span>
+                    </label>
+
+                    <label class="toggle-label">
+                        <div>
+                            <div class="toggle-title">Notificaciones por email</div>
+                            <div class="toggle-desc">Recibe alertas sobre tus propiedades</div>
+                        </div>
+                        <input type="checkbox" name="notify_email" class="toggle-input"
+                               {{if .Profile.NotifyEmail}}checked{{end}}>
+                        <span class="toggle-switch"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- SECTION: Preferred Language -->
+            <div class="profile-section">
+                <h2>Idioma Preferido</h2>
+                <div class="form-group">
+                    <select class="form-select" name="preferred_lang" id="preferred_lang">
+                        <option value="es" {{if eq .Profile.PreferredLang "es"}}selected{{end}}>Español</option>
+                        <option value="en" {{if eq .Profile.PreferredLang "en"}}selected{{end}}>English</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- SECTION: Account (read-only) -->
+            <div class="profile-section profile-section-muted">
+                <h2>Cuenta</h2>
+                <div class="profile-readonly">
+                    <div>
+                        <span class="form-label">Correo Electrónico</span>
+                        <span>{{.Profile.Email}}</span>
+                    </div>
+                    <div>
+                        <span class="form-label">Método de Acceso</span>
+                        {{if .Profile.IsGoogleUser}}
+                        <span class="auth-badge auth-badge-google">Google</span>
+                        {{else}}
+                        <span class="auth-badge auth-badge-email">Email</span>
+                        {{end}}
+                    </div>
+                    <div>
+                        <span class="form-label">Miembro Desde</span>
+                        <span>{{.Profile.CreatedAt.Format "January 2006"}}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-actions">
+                <button type="submit" class="btn btn-primary btn-lg">Guardar Cambios</button>
+                <a href="/dashboard" class="btn btn-secondary btn-lg">Cancelar</a>
+            </div>
+
+        </form>
+    </div>
+</div>
+{{end}}

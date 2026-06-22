@@ -1,0 +1,251 @@
+/* profile.css — Profile edit page components */
+
+.profile-edit-page {
+    max-width: 680px;
+    margin: 0 auto;
+}
+
+.page-header {
+    margin-bottom: var(--s4);
+}
+
+.page-header h1 {
+    margin-bottom: 4px;
+}
+
+/* Sections — clearly separated */
+.profile-section {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: var(--s4);
+    margin-bottom: var(--s3);
+    box-shadow:
+        0 0 0 1px rgba(0,0,0,0.03),
+        0 2px 8px rgba(0,0,0,0.04);
+    border: 1px solid var(--border);
+}
+
+.profile-section h2 {
+    font-size: 1.25rem;
+    margin-bottom: var(--s3);
+    padding-bottom: var(--s2);
+    border-bottom: 1px solid var(--border);
+}
+
+.profile-section-muted {
+    background: var(--bg);
+}
+
+/* Avatar */
+.profile-avatar-edit {
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--s3);
+}
+
+.profile-avatar-img {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--border);
+}
+
+.profile-avatar-initial {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background: var(--obsidian);
+    color: #D8A25E;
+    font-family: var(--font-heading);
+    font-size: 2.5rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+}
+
+/* Username prefix */
+.form-input-wrap {
+    position: relative;
+}
+
+.form-input-prefix {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-light);
+    font-weight: 700;
+    font-size: 1rem;
+    pointer-events: none;
+}
+
+.form-input-with-prefix {
+    padding-left: 36px !important;
+}
+
+/* Form row — two inputs side by side */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--s3);
+}
+
+@media (min-width: 640px) {
+    .form-row { grid-template-columns: 1fr 1fr; }
+}
+
+/* Checkbox group */
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s2);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--s1);
+    font-size: 0.9375rem;
+    color: var(--text);
+    cursor: pointer;
+    padding: 10px var(--s2);
+    background: var(--bg);
+    border-radius: var(--radius);
+    border: 2px solid var(--border);
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.checkbox-label:has(input:checked) {
+    border-color: var(--obsidian-green);
+    background: rgba(47,79,58,0.04);
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--obsidian-green);
+}
+
+/* Toggle switches */
+.toggle-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s2);
+}
+
+.toggle-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--s2);
+    background: var(--bg);
+    border-radius: var(--radius);
+    border: 2px solid var(--border);
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.toggle-label:has(.toggle-input:checked) {
+    border-color: var(--obsidian-green);
+}
+
+.toggle-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.toggle-desc {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-top: 2px;
+}
+
+.toggle-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-switch {
+    width: 48px;
+    height: 28px;
+    background: var(--border);
+    border-radius: 100px;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+.toggle-switch::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+.toggle-input:checked + .toggle-switch {
+    background: var(--obsidian-green);
+}
+
+.toggle-input:checked + .toggle-switch::after {
+    transform: translateX(20px);
+}
+
+/* Read-only account info */
+.profile-readonly {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s2);
+}
+
+.profile-readonly > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--s1) 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9375rem;
+}
+
+.profile-readonly > div:last-child {
+    border-bottom: none;
+}
+
+/* Auth badges */
+.auth-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+}
+
+.auth-badge-google { background: #EEF2FF; color: #4F46E5; }
+.auth-badge-email  { background: var(--success-bg); color: var(--sage); }
+
+/* Profile save actions */
+.profile-actions {
+    display: flex;
+    gap: var(--s2);
+    margin-top: var(--s4);
+}
+
+@media (min-width: 640px) {
+    .profile-section {
+        padding: var(--s5);
+    }
+}
