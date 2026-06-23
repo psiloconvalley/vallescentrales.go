@@ -5,6 +5,7 @@
         <div class="profile-avatar-initial">
             {{if .User}}{{.User.InitialLetter}}{{end}}
         </div>
+
         <div class="profile-info">
             <h1>{{if .User}}{{.User.DisplayNameOrFull}}{{end}}</h1>
             <p class="text-muted">{{if .User}}{{.User.Email}}{{end}}</p>
@@ -16,6 +17,8 @@
                 {{end}}
             {{end}}
         </div>
+
+        <a href="/dashboard/profile" class="btn btn-secondary btn-sm">Editar Perfil</a>
     </div>
 
     <div class="dashboard-header">

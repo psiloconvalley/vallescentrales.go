@@ -1,0 +1,86 @@
+{{define "content"}}
+<div class="container">
+    <div class="profile-edit-page">
+
+        <div class="page-header">
+            <h1>Configuración</h1>
+        </div>
+
+        {{template "settings_tabs" .}}
+
+        {{if .Error}}
+        <div class="flash flash-error">{{.Error}}</div>
+        {{end}}
+
+        {{if .Success}}
+        <div class="flash flash-success">{{.Success}}</div>
+        {{end}}
+
+        <!-- Password Section -->
+        <div class="security-section">
+            <h2>Contraseña</h2>
+            {{if .User.HasPassword}}
+            <form method="POST" action="/dashboard/security/password" novalidate>
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <div class="form-group">
+                    <label class="form-label" for="current_password">Contraseña Actual</label>
+                    <input class="form-input" type="password" id="current_password" name="current_password"
+                           required autocomplete="current-password" placeholder="Tu contraseña actual">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="new_password">Nueva Contraseña</label>
+                    <input class="form-input" type="password" id="new_password" name="new_password"
+                           required autocomplete="new-password" minlength="12" placeholder="Mínimo 12 caracteres">
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Cambiar Contraseña</button>
+            </form>
+            {{else}}
+            <div class="security-note">
+                Tu cuenta usa Google para iniciar sesión. No se necesita contraseña.
+            </div>
+            {{end}}
+        </div>
+
+        <!-- Passkeys Section -->
+        <div class="security-section">
+            <h2>Passkeys</h2>
+            <p class="text-muted text-sm mb-2">Inicia sesión con Face ID, Touch ID o llave de seguridad.</p>
+
+            {{if .Passkeys}}
+            <div class="passkey-list">
+                {{range .Passkeys}}
+                <div class="passkey-item">
+                    <div class="passkey-item-info">
+                        <div class="passkey-device">{{if .DeviceName}}{{.DeviceName}}{{else}}Dispositivo{{end}}</div>
+                        <div class="passkey-meta">
+                            Registrado {{.CreatedAt.Format "2 Jan 2006"}}
+                            {{if .LastUsedAt}} · Usado {{.LastUsedAt.Format "2 Jan 2006"}}{{end}}
+                        </div>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="deletePasskey('{{.ID}}')">Eliminar</button>
+                </div>
+                {{end}}
+            </div>
+            {{else}}
+            <div class="passkey-empty">No tienes passkeys registrados.</div>
+            {{end}}
+
+            <div id="passkeyRegisterSection" class="mt-2">
+                <button id="registerPasskeyBtn" class="btn btn-secondary btn-sm" type="button">
+                    + Agregar Passkey
+                </button>
+                <span id="passkeyStatus" class="passkey-status"></span>
+            </div>
+        </div>
+
+        <!-- Active Sessions (future) -->
+        <div class="security-section profile-section-muted">
+            <h2>Sesiones Activas</h2>
+            <div class="security-note">
+                Próximamente podrás ver y cerrar tus sesiones activas.
+            </div>
+        </div>
+
+    </div>
+</div>
+{{end}}

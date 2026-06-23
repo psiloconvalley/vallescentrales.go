@@ -1,34 +1,91 @@
-/* profile.css — Profile edit page components */
+/* profile.css — Profile settings — compact, scannable */
 
 .profile-edit-page {
-    max-width: 680px;
+    max-width: 640px;
     margin: 0 auto;
 }
 
 .page-header {
-    margin-bottom: var(--s4);
+    margin-bottom: var(--s3);
 }
 
 .page-header h1 {
-    margin-bottom: 4px;
+    font-family: var(--font-heading);
+    font-size: 1.75rem;
+    margin-bottom: 2px;
 }
 
-/* Sections — clearly separated */
-.profile-section {
+.page-header p {
+    font-size: 0.8125rem;
+}
+
+/* Dashboard profile header */
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: var(--s2);
+    padding: var(--s2) var(--s3);
     background: var(--surface);
     border-radius: var(--radius-lg);
-    padding: var(--s4);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
     margin-bottom: var(--s3);
-    box-shadow:
-        0 0 0 1px rgba(0,0,0,0.03),
-        0 2px 8px rgba(0,0,0,0.04);
+    flex-wrap: wrap;
+}
+
+.profile-avatar-initial {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--obsidian);
+    color: #D8A25E;
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.profile-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.profile-info h1 {
+    font-size: 1.125rem;
+    margin-bottom: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.profile-info p {
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+}
+
+/* Sections — tight cards */
+.profile-section {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: var(--s3) var(--s2);
+    margin-bottom: var(--s2);
+    box-shadow: var(--shadow);
     border: 1px solid var(--border);
 }
 
 .profile-section h2 {
-    font-size: 1.25rem;
-    margin-bottom: var(--s3);
-    padding-bottom: var(--s2);
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-light);
+    margin-bottom: var(--s2);
+    padding-bottom: var(--s1);
     border-bottom: 1px solid var(--border);
 }
 
@@ -36,29 +93,57 @@
     background: var(--bg);
 }
 
-/* Avatar */
+/* Settings-sized inputs — 40px, not 52px */
+.profile-edit-page .form-group {
+    margin-bottom: var(--s2);
+}
+
+.profile-edit-page .form-label {
+    font-size: 0.75rem;
+    margin-bottom: 4px;
+}
+
+.profile-edit-page .form-input,
+.profile-edit-page .form-select {
+    height: 40px;
+    font-size: 0.875rem;
+    padding: 0 var(--s2);
+}
+
+.profile-edit-page .form-textarea {
+    font-size: 0.875rem;
+    padding: var(--s1) var(--s2);
+    min-height: 72px;
+}
+
+.profile-edit-page .form-hint {
+    font-size: 0.6875rem;
+    margin-top: 3px;
+}
+
+/* Avatar edit — smaller for settings */
 .profile-avatar-edit {
     display: flex;
     justify-content: center;
-    margin-bottom: var(--s3);
+    margin-bottom: var(--s2);
 }
 
 .profile-avatar-img {
-    width: 96px;
-    height: 96px;
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
     object-fit: cover;
-    border: 3px solid var(--border);
+    border: 2px solid var(--border);
 }
 
-.profile-avatar-initial {
-    width: 96px;
-    height: 96px;
+.profile-avatar-initial-lg {
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
     background: var(--obsidian);
     color: #D8A25E;
     font-family: var(--font-heading);
-    font-size: 2.5rem;
+    font-size: 1.75rem;
     font-weight: 700;
     display: flex;
     align-items: center;
@@ -67,55 +152,51 @@
 }
 
 /* Username prefix */
-.form-input-wrap {
-    position: relative;
-}
-
 .form-input-prefix {
     position: absolute;
-    left: 16px;
+    left: 12px;
     top: 50%;
     transform: translateY(-50%);
     color: var(--text-light);
+    font-family: var(--font-body);
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 0.875rem;
     pointer-events: none;
 }
 
 .form-input-with-prefix {
-    padding-left: 36px !important;
+    padding-left: 30px !important;
 }
 
-/* Form row — two inputs side by side */
+/* Form row */
 .form-row {
     display: grid;
     grid-template-columns: 1fr;
-    gap: var(--s3);
+    gap: var(--s2);
 }
 
-@media (min-width: 640px) {
-    .form-row { grid-template-columns: 1fr 1fr; }
-}
-
-/* Checkbox group */
+/* Checkbox group — compact */
 .checkbox-group {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--s2);
+    gap: 6px;
 }
 
 .checkbox-label {
     display: flex;
     align-items: center;
-    gap: var(--s1);
-    font-size: 0.9375rem;
+    gap: 6px;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 500;
     color: var(--text);
     cursor: pointer;
-    padding: 10px var(--s2);
+    padding: 6px 10px;
     background: var(--bg);
-    border-radius: var(--radius);
-    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
     transition: border-color 0.15s, background 0.15s;
+    user-select: none;
 }
 
 .checkbox-label:has(input:checked) {
@@ -124,44 +205,55 @@
 }
 
 .checkbox-label input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
     accent-color: var(--obsidian-green);
+    flex-shrink: 0;
 }
 
-/* Toggle switches */
+/* Toggle switches — compact */
 .toggle-group {
     display: flex;
     flex-direction: column;
-    gap: var(--s2);
+    gap: var(--s1);
 }
 
 .toggle-label {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--s2);
+    padding: var(--s1) var(--s2);
     background: var(--bg);
-    border-radius: var(--radius);
-    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
     cursor: pointer;
     transition: border-color 0.15s;
+    gap: var(--s2);
 }
 
 .toggle-label:has(.toggle-input:checked) {
     border-color: var(--obsidian-green);
 }
 
+.toggle-text {
+    flex: 1;
+    min-width: 0;
+}
+
 .toggle-title {
-    font-size: 0.9375rem;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
     font-weight: 600;
     color: var(--text);
+    line-height: 1.3;
 }
 
 .toggle-desc {
-    font-size: 0.75rem;
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 400;
     color: var(--text-light);
-    margin-top: 2px;
+    margin-top: 1px;
 }
 
 .toggle-input {
@@ -172,8 +264,8 @@
 }
 
 .toggle-switch {
-    width: 48px;
-    height: 28px;
+    width: 36px;
+    height: 20px;
     background: var(--border);
     border-radius: 100px;
     position: relative;
@@ -184,14 +276,14 @@
 .toggle-switch::after {
     content: "";
     position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 22px;
-    height: 22px;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
     background: white;
     border-radius: 50%;
     transition: transform 0.2s;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 
 .toggle-input:checked + .toggle-switch {
@@ -199,53 +291,339 @@
 }
 
 .toggle-input:checked + .toggle-switch::after {
-    transform: translateX(20px);
+    transform: translateX(16px);
 }
 
 /* Read-only account info */
 .profile-readonly {
     display: flex;
     flex-direction: column;
-    gap: var(--s2);
 }
 
 .profile-readonly > div {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--s1) 0;
+    padding: 6px 0;
     border-bottom: 1px solid var(--border);
-    font-size: 0.9375rem;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    gap: var(--s2);
 }
 
 .profile-readonly > div:last-child {
     border-bottom: none;
 }
 
+.profile-readonly .form-label {
+    margin-bottom: 0;
+    color: var(--text-light);
+    font-size: 0.6875rem;
+}
+
 /* Auth badges */
 .auth-badge {
     display: inline-flex;
     align-items: center;
-    font-size: 0.6875rem;
+    font-family: var(--font-body);
+    font-size: 0.625rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    padding: 3px 10px;
+    padding: 2px 8px;
     border-radius: var(--radius-full);
+}
+
+.auth-badge svg {
+    display: inline;
+    vertical-align: middle;
+    margin-right: 3px;
 }
 
 .auth-badge-google { background: #EEF2FF; color: #4F46E5; }
 .auth-badge-email  { background: var(--success-bg); color: var(--sage); }
 
-/* Profile save actions */
+/* Save actions */
 .profile-actions {
     display: flex;
+    flex-direction: column;
     gap: var(--s2);
-    margin-top: var(--s4);
+    margin-top: var(--s3);
+    margin-bottom: var(--s4);
+}
+
+.profile-actions .btn {
+    height: 44px;
+    font-size: 0.875rem;
+}
+
+/* Responsive */
+@media (min-width: 640px) {
+    .profile-section {
+        padding: var(--s3);
+    }
+
+    .profile-avatar-initial {
+        width: 56px;
+        height: 56px;
+        font-size: 1.5rem;
+    }
+
+    .profile-info h1 {
+        font-size: 1.25rem;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .profile-actions {
+        flex-direction: row;
+    }
+
+    .profile-actions .btn {
+        flex: 1;
+    }
+}
+
+/* Settings tabs */
+.settings-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--border);
+    border-radius: var(--radius);
+    padding: 2px;
+    margin-bottom: var(--s3);
+}
+
+.settings-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
+    transition: all 0.15s;
+    text-decoration: none;
+}
+
+.settings-tab:hover {
+    color: var(--text);
+    background: var(--bg);
+}
+
+.settings-tab.active {
+    color: var(--obsidian);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.settings-tab svg {
+    flex-shrink: 0;
+}
+
+/* Security page specific */
+.security-section {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: var(--s3) var(--s2);
+    margin-bottom: var(--s2);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+
+.security-section h2 {
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-light);
+    margin-bottom: var(--s2);
+    padding-bottom: var(--s1);
+    border-bottom: 1px solid var(--border);
+}
+
+.security-note {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    padding: var(--s2);
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+}
+
+/* Passkey list */
+.passkey-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s1);
+}
+
+.passkey-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--s2);
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    gap: var(--s2);
+}
+
+.passkey-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.passkey-device {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.passkey-meta {
+    font-size: 0.6875rem;
+    color: var(--text-light);
+    margin-top: 2px;
+}
+
+.passkey-empty {
+    text-align: center;
+    padding: var(--s3);
+    color: var(--text-light);
+    font-size: 0.8125rem;
 }
 
 @media (min-width: 640px) {
-    .profile-section {
-        padding: var(--s5);
+    .security-section {
+        padding: var(--s3);
+    }
+}
+
+/* Settings tabs */
+.settings-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--border);
+    border-radius: var(--radius);
+    padding: 2px;
+    margin-bottom: var(--s3);
+}
+
+.settings-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
+    transition: all 0.15s;
+    text-decoration: none;
+}
+
+.settings-tab:hover {
+    color: var(--text);
+    background: var(--bg);
+}
+
+.settings-tab.active {
+    color: var(--obsidian);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.settings-tab svg {
+    flex-shrink: 0;
+}
+
+/* Security page specific */
+.security-section {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: var(--s3) var(--s2);
+    margin-bottom: var(--s2);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+
+.security-section h2 {
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-light);
+    margin-bottom: var(--s2);
+    padding-bottom: var(--s1);
+    border-bottom: 1px solid var(--border);
+}
+
+.security-note {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    padding: var(--s2);
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+}
+
+/* Passkey list */
+.passkey-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s1);
+}
+
+.passkey-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--s2);
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    gap: var(--s2);
+}
+
+.passkey-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.passkey-device {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.passkey-meta {
+    font-size: 0.6875rem;
+    color: var(--text-light);
+    margin-top: 2px;
+}
+
+.passkey-empty {
+    text-align: center;
+    padding: var(--s3);
+    color: var(--text-light);
+    font-size: 0.8125rem;
+}
+
+@media (min-width: 640px) {
+    .security-section {
+        padding: var(--s3);
     }
 }

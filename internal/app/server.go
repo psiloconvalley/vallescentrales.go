@@ -152,6 +152,8 @@ func (s *Server) mountRoutes() {
 			// Profile
 			r.Get("/dashboard/profile", s.profileH.HandleProfileEditPage)
 			r.Post("/dashboard/profile", s.profileH.HandleProfileSave)
+			r.Get("/dashboard/security", s.profileH.HandleSecurityPage)
+			r.Post("/dashboard/security/password", s.profileH.HandleChangePassword)
 
 			// Passkey management — must be logged in
 			r.Post("/auth/passkey/register/begin", s.passkeyH.HandleRegisterBegin)

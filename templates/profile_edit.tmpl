@@ -3,9 +3,10 @@
     <div class="profile-edit-page">
 
         <div class="page-header">
-            <h1>Editar Perfil</h1>
-            <p class="text-muted">Gestiona tu identidad en Valles Centrales</p>
+            <h1>Configuración</h1>
         </div>
+
+        {{template "settings_tabs" .}}
 
         {{if .Error}}
         <div class="flash flash-error">{{.Error}}</div>
@@ -18,7 +19,6 @@
         <form method="POST" action="/dashboard/profile" novalidate>
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
-            <!-- SECTION: Identity -->
             <div class="profile-section">
                 <h2>Identidad</h2>
 
@@ -26,7 +26,7 @@
                     {{if .Profile.AvatarURL}}
                         <img src="{{.Profile.AvatarURL}}" alt="" class="profile-avatar-img">
                     {{else}}
-                        <div class="profile-avatar-initial">{{.Profile.InitialLetter}}</div>
+                        <div class="profile-avatar-initial-lg">{{.Profile.InitialLetter}}</div>
                     {{end}}
                 </div>
 
@@ -34,7 +34,7 @@
                     <label class="form-label" for="display_name">Nombre para Mostrar</label>
                     <input class="form-input" type="text" id="display_name" name="display_name"
                            value="{{if .Profile.DisplayName}}{{.Profile.DisplayName}}{{end}}"
-                           placeholder="Cómo quieres que te vean">
+                           placeholder="Cómo quieres que te vean" autocomplete="nickname">
                     <div class="form-hint">Si no se establece, se usará tu nombre completo</div>
                 </div>
 
@@ -44,29 +44,28 @@
                         <span class="form-input-prefix">@</span>
                         <input class="form-input form-input-with-prefix" type="text" id="username" name="username"
                                value="{{if .Profile.Username}}{{.Profile.Username}}{{end}}"
-                               placeholder="tuusuario" maxlength="30" autocomplete="off">
+                               placeholder="tuusuario" maxlength="30" autocomplete="off"
+                               autocapitalize="none" autocorrect="off">
                     </div>
-                    <div class="form-hint">Solo letras, números y guiones bajos. Mínimo 3 caracteres.</div>
+                    <div class="form-hint">Solo letras minúsculas, números y guiones bajos</div>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="bio">Biografía</label>
                     <textarea class="form-textarea" id="bio" name="bio"
-                              maxlength="160" rows="3"
-                              placeholder="Cuéntanos sobre ti o tu negocio...">{{if .Profile.Bio}}{{.Profile.Bio}}{{end}}</textarea>
-                    <div class="form-hint"><span id="bioCount">{{if .Profile.Bio}}{{len .Profile.Bio}}{{else}}0{{end}}</span>/160 caracteres</div>
+                              maxlength="160" rows="2"
+                              placeholder="Cuéntanos sobre ti...">{{if .Profile.Bio}}{{.Profile.Bio}}{{end}}</textarea>
+                    <div class="form-hint"><span id="bioCount">{{if .Profile.Bio}}{{len .Profile.Bio}}{{else}}0{{end}}</span>/160</div>
                 </div>
             </div>
 
-            <!-- SECTION: Contact & Professional -->
             <div class="profile-section">
-                <h2>Contacto y Profesional</h2>
+                <h2>Contacto</h2>
 
                 <div class="form-group">
                     <label class="form-label" for="full_name">Nombre Completo</label>
                     <input class="form-input" type="text" id="full_name" name="full_name"
-                           value="{{.Profile.FullName}}" required
-                           placeholder="Tu nombre legal">
+                           value="{{.Profile.FullName}}" required placeholder="Tu nombre legal" autocomplete="name">
                 </div>
 
                 <div class="form-row">
@@ -74,45 +73,41 @@
                         <label class="form-label" for="phone">Teléfono</label>
                         <input class="form-input" type="tel" id="phone" name="phone"
                                value="{{if .Profile.Phone}}{{.Profile.Phone}}{{end}}"
-                               placeholder="+52 951 123 4567">
+                               placeholder="+52 951 123 4567" autocomplete="tel">
                     </div>
-
                     <div class="form-group">
                         <label class="form-label" for="whatsapp">WhatsApp</label>
                         <input class="form-input" type="tel" id="whatsapp" name="whatsapp"
                                value="{{if .Profile.WhatsApp}}{{.Profile.WhatsApp}}{{end}}"
-                               placeholder="+52 951 123 4567">
+                               placeholder="+52 951 123 4567" autocomplete="tel">
                     </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="agency_name">Nombre de Agencia</label>
-                    <input class="form-input" type="text" id="agency_name" name="agency_name"
-                           value="{{if .Profile.AgencyName}}{{.Profile.AgencyName}}{{end}}"
-                           placeholder="Opcional — para agentes inmobiliarios">
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label" for="website">Sitio Web</label>
-                        <input class="form-input" type="url" id="website" name="website"
-                               value="{{if .Profile.Website}}{{.Profile.Website}}{{end}}"
-                               placeholder="https://tu-sitio.com">
+                        <label class="form-label" for="agency_name">Agencia</label>
+                        <input class="form-input" type="text" id="agency_name" name="agency_name"
+                               value="{{if .Profile.AgencyName}}{{.Profile.AgencyName}}{{end}}"
+                               placeholder="Opcional" autocomplete="organization">
                     </div>
-
                     <div class="form-group">
                         <label class="form-label" for="location">Ubicación</label>
                         <input class="form-input" type="text" id="location" name="location"
                                value="{{if .Profile.Location}}{{.Profile.Location}}{{end}}"
-                               placeholder="Oaxaca de Juárez">
+                               placeholder="Oaxaca de Juárez" autocomplete="address-level2">
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="website">Sitio Web</label>
+                    <input class="form-input" type="url" id="website" name="website"
+                           value="{{if .Profile.Website}}{{.Profile.Website}}{{end}}"
+                           placeholder="https://tu-sitio.com" autocomplete="url">
                 </div>
             </div>
 
-            <!-- SECTION: Languages -->
             <div class="profile-section">
                 <h2>Idiomas</h2>
-
                 <div class="checkbox-group">
                     <label class="checkbox-label">
                         <input type="checkbox" name="languages" value="es"
@@ -137,47 +132,40 @@
                 </div>
             </div>
 
-            <!-- SECTION: Privacy -->
             <div class="profile-section">
                 <h2>Privacidad</h2>
-
                 <div class="toggle-group">
                     <label class="toggle-label">
-                        <div>
+                        <div class="toggle-text">
                             <div class="toggle-title">Mostrar teléfono</div>
-                            <div class="toggle-desc">Visible en tu perfil público y listados</div>
+                            <div class="toggle-desc">Visible en perfil público y listados</div>
                         </div>
-                        <input type="checkbox" name="show_phone" class="toggle-input"
-                               {{if .Profile.ShowPhone}}checked{{end}}>
+                        <input type="checkbox" name="show_phone" class="toggle-input" {{if .Profile.ShowPhone}}checked{{end}}>
                         <span class="toggle-switch"></span>
                     </label>
-
                     <label class="toggle-label">
-                        <div>
+                        <div class="toggle-text">
                             <div class="toggle-title">Mostrar WhatsApp</div>
-                            <div class="toggle-desc">Botón de contacto en tus propiedades</div>
+                            <div class="toggle-desc">Botón de contacto en propiedades</div>
                         </div>
-                        <input type="checkbox" name="show_whatsapp" class="toggle-input"
-                               {{if .Profile.ShowWhatsApp}}checked{{end}}>
+                        <input type="checkbox" name="show_whatsapp" class="toggle-input" {{if .Profile.ShowWhatsApp}}checked{{end}}>
                         <span class="toggle-switch"></span>
                     </label>
-
                     <label class="toggle-label">
-                        <div>
-                            <div class="toggle-title">Notificaciones por email</div>
-                            <div class="toggle-desc">Recibe alertas sobre tus propiedades</div>
+                        <div class="toggle-text">
+                            <div class="toggle-title">Notificaciones</div>
+                            <div class="toggle-desc">Alertas por email sobre propiedades</div>
                         </div>
-                        <input type="checkbox" name="notify_email" class="toggle-input"
-                               {{if .Profile.NotifyEmail}}checked{{end}}>
+                        <input type="checkbox" name="notify_email" class="toggle-input" {{if .Profile.NotifyEmail}}checked{{end}}>
                         <span class="toggle-switch"></span>
                     </label>
                 </div>
             </div>
 
-            <!-- SECTION: Preferred Language -->
             <div class="profile-section">
-                <h2>Idioma Preferido</h2>
+                <h2>Plataforma</h2>
                 <div class="form-group">
+                    <label class="form-label" for="preferred_lang">Idioma</label>
                     <select class="form-select" name="preferred_lang" id="preferred_lang">
                         <option value="es" {{if eq .Profile.PreferredLang "es"}}selected{{end}}>Español</option>
                         <option value="en" {{if eq .Profile.PreferredLang "en"}}selected{{end}}>English</option>
@@ -185,16 +173,15 @@
                 </div>
             </div>
 
-            <!-- SECTION: Account (read-only) -->
             <div class="profile-section profile-section-muted">
                 <h2>Cuenta</h2>
                 <div class="profile-readonly">
                     <div>
-                        <span class="form-label">Correo Electrónico</span>
+                        <span class="form-label">Email</span>
                         <span>{{.Profile.Email}}</span>
                     </div>
                     <div>
-                        <span class="form-label">Método de Acceso</span>
+                        <span class="form-label">Acceso</span>
                         {{if .Profile.IsGoogleUser}}
                         <span class="auth-badge auth-badge-google">Google</span>
                         {{else}}
@@ -202,17 +189,16 @@
                         {{end}}
                     </div>
                     <div>
-                        <span class="form-label">Miembro Desde</span>
-                        <span>{{.Profile.CreatedAt.Format "January 2006"}}</span>
+                        <span class="form-label">Miembro</span>
+                        <span>{{.Profile.CreatedAt.Format "Jan 2006"}}</span>
                     </div>
                 </div>
             </div>
 
             <div class="profile-actions">
-                <button type="submit" class="btn btn-primary btn-lg">Guardar Cambios</button>
-                <a href="/dashboard" class="btn btn-secondary btn-lg">Cancelar</a>
+                <button type="submit" class="btn btn-primary">Guardar</button>
+                <a href="/dashboard" class="btn btn-secondary">Cancelar</a>
             </div>
-
         </form>
     </div>
 </div>

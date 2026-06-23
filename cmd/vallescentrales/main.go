@@ -71,7 +71,7 @@ func main() {
 	// Handlers
 	authH    := handlers.NewAuthHandler(userRepo, sessionMgr, googleAuth, tmpl)
 	listingH := handlers.NewListingHandler(listingRepo, tmpl)
-	profileH := handlers.NewProfileHandler(userRepo, tmpl)
+	profileH := handlers.NewProfileHandler(userRepo, passkeyRepo, tmpl)
 	passkeyH := handlers.NewPasskeyHandler(webAuthn, passkeyRepo, userRepo, sessionMgr)
 
 	// Server
