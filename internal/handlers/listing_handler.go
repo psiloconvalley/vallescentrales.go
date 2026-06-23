@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"vallescentrales/internal/catalog"
 	"vallescentrales/internal/middleware"
 	"vallescentrales/internal/models"
 	"vallescentrales/internal/repo"
@@ -148,16 +149,43 @@ func (h *ListingHandler) HandleGetListing(w http.ResponseWriter, r *http.Request
 	respond(w, http.StatusOK, listing)
 }
 
+// ─── Create Listing ──────────────────────────────────────────────────────────
+
+// listingFormData holds form values for re-rendering on errors.
+type listingFormData struct {
+	Title          string
+	PropertyType   string
+	PriceMXN       string
+	Municipality   string
+	Community      string
+	Description    string
+	AreaM2         string
+	ConstructionM2 string
+}
+
 // HandleNewListingPage serves the create listing form.
 func (h *ListingHandler) HandleNewListingPage(w http.ResponseWriter, r *http.Request) {
-	respond(w, http.StatusOK, map[string]string{"page": "new listing"})
+	h.render.Render(w, r, "listing_new.tmpl", h.pageData(r, "Publicar Propiedad", map[string]any{
+		"Regions":        catalog.Regions(),
+		"Municipalities": catalog.MunicipalitiesByRegion(),
+	}))
+}
+
+// renderListingForm re-renders the form with error and preserved data.
+func (h *ListingHandler) renderListingForm(w http.ResponseWriter, r *http.Request, errMsg string, fd listingFormData) {
+	h.render.Render(w, r, "listing_new.tmpl", h.pageData(r, "Publicar Propiedad", map[string]any{
+		"Error":          errMsg,
+		"FormData":       fd,
+		"Regions":        catalog.Regions(),
+		"Municipalities": catalog.MunicipalitiesByRegion(),
+	}))
 }
 
 // HandleCreateListing creates a new listing in draft status.
 func (h *ListingHandler) HandleCreateListing(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
-		respondError(w, http.StatusUnauthorized, "authentication required")
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
 		return
 	}
 
@@ -167,23 +195,44 @@ func (h *ListingHandler) HandleCreateListing(w http.ResponseWriter, r *http.Requ
 	}
 
 	if err := r.ParseForm(); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid form data")
+		h.renderListingForm(w, r, "Datos de formulario inválidos", listingFormData{})
 		return
 	}
 
-	title        := strings.TrimSpace(r.FormValue("title"))
-	propertyType := strings.TrimSpace(r.FormValue("property_type"))
-	priceStr     := strings.TrimSpace(r.FormValue("price_mxn"))
-	municipality := strings.TrimSpace(r.FormValue("municipality"))
+	title          := strings.TrimSpace(r.FormValue("title"))
+	propertyType   := strings.TrimSpace(r.FormValue("property_type"))
+	priceStr       := strings.TrimSpace(r.FormValue("price_mxn"))
+	municipality   := strings.TrimSpace(r.FormValue("municipality"))
+	community      := strings.TrimSpace(r.FormValue("community"))
+	description    := strings.TrimSpace(r.FormValue("description"))
+	areaStr        := strings.TrimSpace(r.FormValue("area_m2"))
+	constructionStr := strings.TrimSpace(r.FormValue("construction_m2"))
 
+	fd := listingFormData{
+		Title:          title,
+		PropertyType:   propertyType,
+		PriceMXN:       priceStr,
+		Municipality:   municipality,
+		Community:      community,
+		Description:    description,
+		AreaM2:         areaStr,
+		ConstructionM2: constructionStr,
+	}
+
+	// Validate required fields
 	if title == "" || propertyType == "" || priceStr == "" || municipality == "" {
-		respondError(w, http.StatusBadRequest, "title, property_type, price_mxn, and municipality are required")
+		h.renderListingForm(w, r, "Título, tipo, precio y municipio son obligatorios", fd)
+		return
+	}
+
+	if len(title) < 10 {
+		h.renderListingForm(w, r, "El título debe tener al menos 10 caracteres", fd)
 		return
 	}
 
 	price, err := strconv.ParseFloat(priceStr, 64)
 	if err != nil || price <= 0 {
-		respondError(w, http.StatusBadRequest, "price_mxn must be a positive number")
+		h.renderListingForm(w, r, "El precio debe ser un número positivo", fd)
 		return
 	}
 
@@ -191,7 +240,7 @@ func (h *ListingHandler) HandleCreateListing(w http.ResponseWriter, r *http.Requ
 	switch pt {
 	case models.TypeLand, models.TypeHouse, models.TypeRancho, models.TypeCommercial, models.TypeCabin:
 	default:
-		respondError(w, http.StatusBadRequest, "invalid property_type")
+		h.renderListingForm(w, r, "Tipo de propiedad inválido", fd)
 		return
 	}
 
@@ -199,7 +248,7 @@ func (h *ListingHandler) HandleCreateListing(w http.ResponseWriter, r *http.Requ
 	slug, err = h.ensureUniqueSlug(r, slug)
 	if err != nil {
 		slog.Error("failed to generate unique slug", "title", title, "error", err)
-		respondError(w, http.StatusInternalServerError, "failed to create listing")
+		h.renderListingForm(w, r, "Error al crear la propiedad", fd)
 		return
 	}
 
@@ -219,7 +268,7 @@ func (h *ListingHandler) HandleCreateListing(w http.ResponseWriter, r *http.Requ
 			"title", title,
 			"error", err,
 		)
-		respondError(w, http.StatusInternalServerError, "failed to create listing")
+		h.renderListingForm(w, r, "Error al crear la propiedad", fd)
 		return
 	}
 
@@ -231,6 +280,8 @@ func (h *ListingHandler) HandleCreateListing(w http.ResponseWriter, r *http.Requ
 
 	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }
+
+// ─── Dashboard ───────────────────────────────────────────────────────────────
 
 // HandleDashboard renders the owner dashboard with their listings.
 func (h *ListingHandler) HandleDashboard(w http.ResponseWriter, r *http.Request) {
@@ -250,6 +301,8 @@ func (h *ListingHandler) HandleDashboard(w http.ResponseWriter, r *http.Request)
 		"Listings": listings,
 	}))
 }
+
+// ─── Delete ──────────────────────────────────────────────────────────────────
 
 // HandleDeleteListing archives a listing (soft delete).
 func (h *ListingHandler) HandleDeleteListing(w http.ResponseWriter, r *http.Request) {
@@ -286,7 +339,8 @@ func (h *ListingHandler) HandleDeleteListing(w http.ResponseWriter, r *http.Requ
 	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }
 
-// generateSlug creates a URL-safe slug from a title.
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 func generateSlug(title string) string {
 	slug := strings.ToLower(strings.TrimSpace(title))
 
@@ -310,7 +364,6 @@ func generateSlug(title string) string {
 	return strings.Trim(s, "-")
 }
 
-// ensureUniqueSlug appends a counter suffix until the slug is unique.
 func (h *ListingHandler) ensureUniqueSlug(r *http.Request, base string) (string, error) {
 	slug := base
 	for i := 1; i <= 10; i++ {

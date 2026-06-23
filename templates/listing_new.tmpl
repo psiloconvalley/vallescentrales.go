@@ -1,0 +1,117 @@
+{{define "content"}}
+<div class="container">
+    <div class="profile-edit-page">
+
+        <div class="page-header">
+            <h1>Publicar Propiedad</h1>
+            <p class="text-muted">Tu propiedad se creará como borrador para revisarla antes de publicar.</p>
+        </div>
+
+        {{if .Error}}
+        <div class="flash flash-error">{{.Error}}</div>
+        {{end}}
+
+        <form method="POST" action="/listings/new" novalidate>
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+            <div class="profile-section">
+                <h2>Información Básica</h2>
+
+                <div class="form-group">
+                    <label class="form-label" for="title">Título de la Propiedad</label>
+                    <input class="form-input" type="text" id="title" name="title"
+                           value="{{if .FormData}}{{.FormData.Title}}{{end}}"
+                           required minlength="10" maxlength="200"
+                           placeholder="Ej: Terreno con vista al valle en Tlacolula">
+                    <div class="form-hint">Mínimo 10 caracteres</div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="property_type">Tipo de Propiedad</label>
+                        <select class="form-select" id="property_type" name="property_type" required>
+                            <option value="" disabled {{if not .FormData}}selected{{end}}>Seleccionar...</option>
+                            <option value="land" {{if and .FormData (eq .FormData.PropertyType "land")}}selected{{end}}>Terreno</option>
+                            <option value="house" {{if and .FormData (eq .FormData.PropertyType "house")}}selected{{end}}>Casa</option>
+                            <option value="rancho" {{if and .FormData (eq .FormData.PropertyType "rancho")}}selected{{end}}>Rancho</option>
+                            <option value="commercial" {{if and .FormData (eq .FormData.PropertyType "commercial")}}selected{{end}}>Comercial</option>
+                            <option value="cabin" {{if and .FormData (eq .FormData.PropertyType "cabin")}}selected{{end}}>Cabaña</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="price_mxn">Precio (MXN)</label>
+                        <input class="form-input" type="number" id="price_mxn" name="price_mxn"
+                               value="{{if .FormData}}{{.FormData.PriceMXN}}{{end}}"
+                               required min="1" step="1"
+                               placeholder="1500000">
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <h2>Ubicación</h2>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="municipality">Municipio</label>
+                        <select class="form-select" id="municipality" name="municipality" required>
+                            <option value="" disabled {{if not .FormData}}selected{{end}}>Seleccionar región y municipio...</option>
+                            {{range .Regions}}
+                            <optgroup label="{{.}}">
+                                {{$region := .}}
+                                {{range index $.Municipalities $region}}
+                                <option value="{{.Value}}" {{if and $.FormData (eq $.FormData.Municipality .Value)}}selected{{end}}>{{.Label}}</option>
+                                {{end}}
+                            </optgroup>
+                            {{end}}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="community">Comunidad / Colonia</label>
+                        <input class="form-input" type="text" id="community" name="community"
+                               value="{{if .FormData}}{{.FormData.Community}}{{end}}"
+                               placeholder="Opcional">
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <h2>Detalles</h2>
+
+                <div class="form-group">
+                    <label class="form-label" for="description">Descripción</label>
+                    <textarea class="form-textarea" id="description" name="description"
+                              rows="4" maxlength="2000"
+                              placeholder="Describe la propiedad, accesos, servicios, características...">{{if .FormData}}{{.FormData.Description}}{{end}}</textarea>
+                    <div class="form-hint">Opcional. Máximo 2000 caracteres.</div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="area_m2">Superficie (m²)</label>
+                        <input class="form-input" type="number" id="area_m2" name="area_m2"
+                               value="{{if .FormData}}{{.FormData.AreaM2}}{{end}}"
+                               min="1" step="0.01"
+                               placeholder="500">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="construction_m2">Construcción (m²)</label>
+                        <input class="form-input" type="number" id="construction_m2" name="construction_m2"
+                               value="{{if .FormData}}{{.FormData.ConstructionM2}}{{end}}"
+                               min="1" step="0.01"
+                               placeholder="Solo si aplica">
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-actions">
+                <button type="submit" class="btn btn-primary">Crear Borrador</button>
+                <a href="/dashboard" class="btn btn-secondary">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}
