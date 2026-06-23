@@ -1,8 +1,7 @@
 // internal/app/templates.go
 // Template renderer — parses all templates at startup,
 // executes them safely on every request.
-// Rule 15: never add a template variable without verifying
-// it exists in ALL render call sites.
+// Injects AssetVersion on every render for cache busting.
 
 package app
 
@@ -12,27 +11,29 @@ import (
 	"log/slog"
 	"net/http"
 	"path/filepath"
+	"strconv"
+	"time"
 )
 
-// TemplateRenderer holds all parsed templates.
+// TemplateRenderer holds all parsed templates and the asset version.
 // Parsed once at startup — never on each request.
 type TemplateRenderer struct {
-	templates map[string]*template.Template
+	templates    map[string]*template.Template
+	assetVersion string
 }
 
 // NewTemplateRenderer parses all templates from the templates/ directory.
 // Returns an error if any template fails to parse — app will not start.
+// AssetVersion is set to Unix timestamp at startup — changes every deploy.
 func NewTemplateRenderer() (*TemplateRenderer, error) {
 	templates := make(map[string]*template.Template)
 
-	// Base layout — included in every page template
 	base := filepath.Join("templates", "base.tmpl")
 	partials, err := filepath.Glob(filepath.Join("templates", "partials", "*.tmpl"))
 	if err != nil {
 		return nil, fmt.Errorf("templates: failed to glob partials: %w", err)
 	}
 
-	// Page templates — each one includes base + all partials
 	pages, err := filepath.Glob(filepath.Join("templates", "*.tmpl"))
 	if err != nil {
 		return nil, fmt.Errorf("templates: failed to glob pages: %w", err)
@@ -48,12 +49,10 @@ func NewTemplateRenderer() (*TemplateRenderer, error) {
 	for _, page := range pages {
 		name := filepath.Base(page)
 
-		// Skip base.tmpl itself — it is always a dependency, never rendered directly
 		if name == "base.tmpl" {
 			continue
 		}
 
-		// Build file list: page + base + all partials
 		files := []string{page, base}
 		files = append(files, partials...)
 
@@ -66,12 +65,18 @@ func NewTemplateRenderer() (*TemplateRenderer, error) {
 		slog.Debug("template parsed", "name", name)
 	}
 
-	slog.Info("templates loaded", "count", len(templates))
-	return &TemplateRenderer{templates: templates}, nil
+	version := strconv.FormatInt(time.Now().Unix(), 10)
+
+	slog.Info("templates loaded", "count", len(templates), "asset_version", version)
+	return &TemplateRenderer{
+		templates:    templates,
+		assetVersion: version,
+	}, nil
 }
 
 // Render executes a named template and writes it to the response.
-// Status 500 is written if the template is not found or execution fails.
+// Injects AssetVersion into every render for cache busting.
+// Sets Cache-Control: no-store on HTML responses.
 func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name string, data any) {
 	tmpl, ok := tr.templates[name]
 	if !ok {
@@ -80,12 +85,17 @@ func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name 
 		return
 	}
 
+	// Inject AssetVersion into template data
+	if m, ok := data.(map[string]any); ok {
+		m["AssetVersion"] = tr.assetVersion
+	}
+
+	// HTML should never be cached — always serve fresh
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
 
 	if err := tmpl.ExecuteTemplate(w, "base", data); err != nil {
 		slog.Error("template execution failed", "name", name, "error", err)
-		// Headers already sent — cannot change status code
-		// Log the error and return
 		return
 	}
 }

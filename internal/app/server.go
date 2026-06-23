@@ -27,16 +27,16 @@ const (
 )
 
 type Server struct {
-	cfg       *Config
-	db        *pgxpool.Pool
-	router    *chi.Mux
-	logger    *slog.Logger
-	tmpl      *TemplateRenderer
-	authMW    *appmiddleware.AuthMiddleware
-	authH     *handlers.AuthHandler
-	listingH  *handlers.ListingHandler
-	profileH  *handlers.ProfileHandler
-	passkeyH  *handlers.PasskeyHandler
+	cfg      *Config
+	db       *pgxpool.Pool
+	router   *chi.Mux
+	logger   *slog.Logger
+	tmpl     *TemplateRenderer
+	authMW   *appmiddleware.AuthMiddleware
+	authH    *handlers.AuthHandler
+	listingH *handlers.ListingHandler
+	profileH *handlers.ProfileHandler
+	passkeyH *handlers.PasskeyHandler
 }
 
 func NewServer(
@@ -113,7 +113,7 @@ func (s *Server) mountRoutes() {
 	s.router.Get("/health", s.handleHealth)
 
 	s.router.Handle("/static/*", http.StripPrefix("/static/",
-		http.FileServer(http.Dir("static"))))
+		s.cacheStatic(http.FileServer(http.Dir("static")))))
 
 	authLimiter := appmiddleware.NewRateLimiter(10, time.Minute)
 
@@ -282,6 +282,16 @@ func (s *Server) securityHeaders(next http.Handler) http.Handler {
 func (s *Server) limitRequestBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+		next.ServeHTTP(w, r)
+	})
+}
+
+// cacheStatic sets aggressive cache headers on static assets.
+// Assets are versioned via ?v= query string in templates.
+// When the version changes (new deploy), browser fetches fresh files.
+func (s *Server) cacheStatic(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		next.ServeHTTP(w, r)
 	})
 }
