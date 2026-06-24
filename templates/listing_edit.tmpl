@@ -29,7 +29,7 @@
 
             <div class="listing-price-card mt-3">
                 <div class="listing-price-main">
-                    ${{printf "%.0f" .Listing.PriceMXN}} <span class="listing-price-currency">MXN</span>
+		 {{formatMXN .Listing.PriceMXN}}
                 </div>
                 <div class="listing-price-note">Precio actual</div>
             </div>

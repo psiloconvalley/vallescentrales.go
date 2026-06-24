@@ -12,9 +12,8 @@
     </a>
     <div class="listing-card-body">
         <span class="badge badge-{{.PropertyType}}">{{.PropertyType}}</span>
-        <div class="listing-card-price">
-            ${{printf "%.0f" .PriceMXN}} MXN
-        </div>
+        <div class="listing-card-price">{{formatMXN .PriceMXN}}</div>
+        <div class="listing-card-price-usd text-sm text-light">~{{formatUSD (convertToUSD .PriceMXN)}}</div>
         <h3 class="listing-card-title">
             <a href="/listings/{{.Slug}}">{{.Title}}</a>
         </h3>

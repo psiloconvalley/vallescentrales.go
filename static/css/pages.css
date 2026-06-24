@@ -447,3 +447,17 @@
         width: auto;
     }
 }
+
+/* USD secondary price */
+.listing-price-usd {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.listing-card-price-usd {
+    font-family: var(--font-mono);
+    margin-top: 1px;
+}

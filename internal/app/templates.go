@@ -2,6 +2,7 @@
 // Template renderer — parses all templates at startup,
 // executes them safely on every request.
 // Injects AssetVersion on every render for cache busting.
+// Registers currency helpers for consistent MXN/USD display.
 
 package app
 
@@ -13,6 +14,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"vallescentrales/internal/services"
 )
 
 // TemplateRenderer holds all parsed templates and the asset version.
@@ -23,9 +26,9 @@ type TemplateRenderer struct {
 }
 
 // NewTemplateRenderer parses all templates from the templates/ directory.
-// Returns an error if any template fails to parse — app will not start.
-// AssetVersion is set to Unix timestamp at startup — changes every deploy.
-func NewTemplateRenderer() (*TemplateRenderer, error) {
+// AssetVersion changes every deploy/startup.
+// CurrencyService is optional but recommended.
+func NewTemplateRenderer(currency *services.CurrencyService) (*TemplateRenderer, error) {
 	templates := make(map[string]*template.Template)
 
 	base := filepath.Join("templates", "base.tmpl")
@@ -46,6 +49,17 @@ func NewTemplateRenderer() (*TemplateRenderer, error) {
 
 	pages = append(pages, authPages...)
 
+	funcs := template.FuncMap{
+		"formatMXN": services.FormatMXN,
+		"formatUSD": services.FormatUSD,
+		"convertToUSD": func(mxn float64) float64 {
+			if currency == nil {
+				return 0
+			}
+			return currency.ConvertMXNToUSD(mxn)
+		},
+	}
+
 	for _, page := range pages {
 		name := filepath.Base(page)
 
@@ -56,7 +70,7 @@ func NewTemplateRenderer() (*TemplateRenderer, error) {
 		files := []string{page, base}
 		files = append(files, partials...)
 
-		tmpl, err := template.New(name).ParseFiles(files...)
+		tmpl, err := template.New(name).Funcs(funcs).ParseFiles(files...)
 		if err != nil {
 			return nil, fmt.Errorf("templates: failed to parse %s: %w", name, err)
 		}
@@ -67,7 +81,11 @@ func NewTemplateRenderer() (*TemplateRenderer, error) {
 
 	version := strconv.FormatInt(time.Now().Unix(), 10)
 
-	slog.Info("templates loaded", "count", len(templates), "asset_version", version)
+	slog.Info("templates loaded",
+		"count", len(templates),
+		"asset_version", version,
+	)
+
 	return &TemplateRenderer{
 		templates:    templates,
 		assetVersion: version,
@@ -75,8 +93,6 @@ func NewTemplateRenderer() (*TemplateRenderer, error) {
 }
 
 // Render executes a named template and writes it to the response.
-// Injects AssetVersion into every render for cache busting.
-// Sets Cache-Control: no-store on HTML responses.
 func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name string, data any) {
 	tmpl, ok := tr.templates[name]
 	if !ok {
@@ -85,12 +101,10 @@ func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name 
 		return
 	}
 
-	// Inject AssetVersion into template data
 	if m, ok := data.(map[string]any); ok {
 		m["AssetVersion"] = tr.assetVersion
 	}
 
-	// HTML should never be cached — always serve fresh
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 

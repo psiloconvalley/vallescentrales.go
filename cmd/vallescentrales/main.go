@@ -59,7 +59,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Storage (Cloudflare R2)
+	// Infrastructure services
 	storageSvc := services.NewStorageService(
 		cfg.R2AccountID,
 		cfg.R2AccessKey,
@@ -68,11 +68,13 @@ func main() {
 		cfg.R2PublicURL,
 	)
 
+	currencySvc := services.NewCurrencyService(db)
+
 	// Middleware
 	authMW := middleware.NewAuthMiddleware(sessionMgr, userRepo)
 
 	// Templates
-	tmpl, err := app.NewTemplateRenderer()
+	tmpl, err := app.NewTemplateRenderer(currencySvc)
 	if err != nil {
 		slog.Error("failed to parse templates", "error", err)
 		os.Exit(1)
