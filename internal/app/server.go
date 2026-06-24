@@ -1,6 +1,7 @@
 // internal/app/server.go
 // Router wiring, security middleware, auth-aware route groups,
-// CSRF protection, rate limiting, and graceful shutdown.
+// CSRF protection, rate limiting, static asset caching,
+// and graceful shutdown.
 
 package app
 
@@ -23,7 +24,7 @@ import (
 )
 
 const (
-	maxRequestBodyBytes = 1 << 20
+	maxRequestBodyBytes = 1 << 20 // 1MB for normal requests
 )
 
 type Server struct {
@@ -37,6 +38,7 @@ type Server struct {
 	listingH *handlers.ListingHandler
 	profileH *handlers.ProfileHandler
 	passkeyH *handlers.PasskeyHandler
+	uploadH  *handlers.UploadHandler
 }
 
 func NewServer(
@@ -47,6 +49,7 @@ func NewServer(
 	listingH *handlers.ListingHandler,
 	profileH *handlers.ProfileHandler,
 	passkeyH *handlers.PasskeyHandler,
+	uploadH *handlers.UploadHandler,
 	tmpl *TemplateRenderer,
 ) (*Server, error) {
 	if authMW == nil {
@@ -63,6 +66,9 @@ func NewServer(
 	}
 	if passkeyH == nil {
 		return nil, fmt.Errorf("server: passkey handler is required")
+	}
+	if uploadH == nil {
+		return nil, fmt.Errorf("server: upload handler is required")
 	}
 	if tmpl == nil {
 		return nil, fmt.Errorf("server: template renderer is required")
@@ -91,6 +97,7 @@ func NewServer(
 		listingH: listingH,
 		profileH: profileH,
 		passkeyH: passkeyH,
+		uploadH:  uploadH,
 	}
 
 	s.mountMiddleware()
@@ -110,11 +117,14 @@ func (s *Server) mountMiddleware() {
 }
 
 func (s *Server) mountRoutes() {
+	// Public health endpoint
 	s.router.Get("/health", s.handleHealth)
 
+	// Static assets with long cache because templates use ?v=AssetVersion
 	s.router.Handle("/static/*", http.StripPrefix("/static/",
 		s.cacheStatic(http.FileServer(http.Dir("static")))))
 
+	// Rate limit auth endpoints
 	authLimiter := appmiddleware.NewRateLimiter(10, time.Minute)
 
 	s.router.Group(func(r chi.Router) {
@@ -126,18 +136,21 @@ func (s *Server) mountRoutes() {
 		r.Get("/listings", s.listingH.HandleListListings)
 		r.Get("/listings/{slug}", s.listingH.HandleGetListing)
 
-		// AUTH — rate limited
+		// AUTH
 		r.Group(func(r chi.Router) {
 			r.Use(authLimiter.Limit)
+
 			r.Get("/auth/login", s.authH.HandleLoginPage)
 			r.Post("/auth/login", s.authH.HandleLogin)
 			r.Get("/auth/register", s.authH.HandleRegisterPage)
 			r.Post("/auth/register", s.authH.HandleRegister)
 			r.Post("/auth/logout", s.authH.HandleLogout)
+
+			// Google OAuth
 			r.Get("/auth/google", s.authH.HandleGoogleLogin)
 			r.Get("/auth/google/callback", s.authH.HandleGoogleCallback)
 
-			// Passkey login — public (no auth required)
+			// Passkey login
 			r.Post("/auth/passkey/login/begin", s.passkeyH.HandleLoginBegin)
 			r.Post("/auth/passkey/login/finish", s.passkeyH.HandleLoginFinish)
 		})
@@ -152,21 +165,26 @@ func (s *Server) mountRoutes() {
 			// Profile
 			r.Get("/dashboard/profile", s.profileH.HandleProfileEditPage)
 			r.Post("/dashboard/profile", s.profileH.HandleProfileSave)
+
+			// Security
 			r.Get("/dashboard/security", s.profileH.HandleSecurityPage)
 			r.Post("/dashboard/security/password", s.profileH.HandleChangePassword)
 
-			// Passkey management — must be logged in
+			// Passkey management
 			r.Post("/auth/passkey/register/begin", s.passkeyH.HandleRegisterBegin)
 			r.Post("/auth/passkey/register/finish", s.passkeyH.HandleRegisterFinish)
 			r.Delete("/auth/passkey/{id}", s.passkeyH.HandleDeletePasskey)
 
-			// Listings management
+			// Avatar upload
+			r.Post("/dashboard/avatar", s.uploadH.HandleUploadAvatar)
+
+			// Listing management
 			r.Get("/listings/new", s.listingH.HandleNewListingPage)
 			r.Post("/listings/new", s.listingH.HandleCreateListing)
 			r.Get("/listings/{slug}/edit", s.handleEditListingPage)
 			r.Post("/listings/{slug}/edit", s.handleEditListing)
 			r.Post("/listings/{slug}/delete", s.listingH.HandleDeleteListing)
-			r.Post("/listings/{slug}/photos", s.handleUploadPhotos)
+			r.Post("/listings/{slug}/photos", s.uploadH.HandleUploadListingPhotos)
 		})
 	})
 }
@@ -179,6 +197,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"error":"database unavailable"}`))
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = fmt.Fprintf(w, `{"status":"ok","env":%q}`, s.cfg.AppEnv)
@@ -191,12 +210,6 @@ func (s *Server) handleEditListingPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleEditListing(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusNotImplemented)
-	_, _ = w.Write([]byte(`{"error":"not implemented"}`))
-}
-
-func (s *Server) handleUploadPhotos(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusNotImplemented)
 	_, _ = w.Write([]byte(`{"error":"not implemented"}`))
@@ -286,9 +299,7 @@ func (s *Server) limitRequestBody(next http.Handler) http.Handler {
 	})
 }
 
-// cacheStatic sets aggressive cache headers on static assets.
-// Assets are versioned via ?v= query string in templates.
-// When the version changes (new deploy), browser fetches fresh files.
+// cacheStatic sets aggressive cache headers on versioned static assets.
 func (s *Server) cacheStatic(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")

@@ -33,7 +33,7 @@ func main() {
 	defer db.Close()
 
 	// Repos
-	userRepo    := repo.NewUserRepo(db)
+	userRepo := repo.NewUserRepo(db)
 	sessionRepo := repo.NewSessionRepo(db)
 	listingRepo := repo.NewListingRepo(db)
 	passkeyRepo := repo.NewPasskeyRepo(db)
@@ -67,7 +67,6 @@ func main() {
 		cfg.R2Bucket,
 		cfg.R2PublicURL,
 	)
-	_ = storageSvc // wired to photo upload handler next
 
 	// Middleware
 	authMW := middleware.NewAuthMiddleware(sessionMgr, userRepo)
@@ -80,13 +79,14 @@ func main() {
 	}
 
 	// Handlers
-	authH    := handlers.NewAuthHandler(userRepo, sessionMgr, googleAuth, tmpl)
+	authH := handlers.NewAuthHandler(userRepo, sessionMgr, googleAuth, tmpl)
 	listingH := handlers.NewListingHandler(listingRepo, tmpl)
 	profileH := handlers.NewProfileHandler(userRepo, passkeyRepo, tmpl)
 	passkeyH := handlers.NewPasskeyHandler(webAuthn, passkeyRepo, userRepo, sessionMgr)
+	uploadH := handlers.NewUploadHandler(storageSvc, listingRepo, userRepo)
 
 	// Server
-	server, err := app.NewServer(cfg, db, authMW, authH, listingH, profileH, passkeyH, tmpl)
+	server, err := app.NewServer(cfg, db, authMW, authH, listingH, profileH, passkeyH, uploadH, tmpl)
 	if err != nil {
 		slog.Error("failed to build server", "error", err)
 		os.Exit(1)

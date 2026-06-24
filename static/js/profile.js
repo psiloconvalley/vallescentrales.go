@@ -38,4 +38,21 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+
+    // ── Avatar file input ──
+    var avatarInput = document.getElementById("avatar");
+    var avatarName = document.getElementById("avatarFileName");
+    var avatarBtn = document.getElementById("avatarSubmitBtn");
+
+    if (avatarInput && avatarName && avatarBtn) {
+        avatarInput.addEventListener("change", function () {
+            if (avatarInput.files.length > 0) {
+                avatarName.textContent = avatarInput.files[0].name;
+                avatarBtn.classList.remove("hidden");
+            } else {
+                avatarName.textContent = "";
+                avatarBtn.classList.add("hidden");
+            }
+        });
+    }
 });
