@@ -42,12 +42,42 @@
             </svg>
         </a>
 
+        <!-- Mobile hamburger -->
         <button class="nav-hamburger" id="navToggle" aria-label="Open menu" aria-expanded="false">
             <span class="hamburger-line"></span>
             <span class="hamburger-line"></span>
             <span class="hamburger-line"></span>
         </button>
 
+        <!-- Desktop nav -->
+        <div class="nav-desktop">
+            <ul class="nav-links">
+                <li><a href="/listings">Propiedades</a></li>
+                {{if .User}}
+                    <li><a href="/listings/new" class="nav-cta">+ Publicar</a></li>
+                    <li class="nav-user-menu">
+                        <button class="nav-avatar" id="userMenuToggle" aria-label="User menu" aria-expanded="false">
+                            {{.User.InitialLetter}}
+                        </button>
+                        <div class="nav-dropdown" id="userDropdown">
+                            <a href="/dashboard" class="nav-dropdown-item">Mi Panel</a>
+                            <a href="/dashboard/profile" class="nav-dropdown-item">Perfil</a>
+                            <a href="/dashboard/security" class="nav-dropdown-item">Seguridad</a>
+                            <div class="nav-dropdown-divider"></div>
+                            <form method="POST" action="/auth/logout">
+                                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                                <button type="submit" class="nav-dropdown-item nav-dropdown-logout">Salir</button>
+                            </form>
+                        </div>
+                    </li>
+                {{else}}
+                    <li><a href="/auth/login">Ingresar</a></li>
+                    <li><a href="/auth/register" class="nav-cta">Registrarse</a></li>
+                {{end}}
+            </ul>
+        </div>
+
+        <!-- Mobile menu overlay -->
         <div class="nav-menu" id="navMenu">
             <button class="nav-close" id="navClose" aria-label="Close menu">✕</button>
             <ul class="nav-links">
@@ -55,6 +85,8 @@
                 {{if .User}}
                     <li><a href="/dashboard">Mi Panel</a></li>
                     <li><a href="/listings/new" class="nav-cta">+ Publicar</a></li>
+                    <li><a href="/dashboard/profile">Perfil</a></li>
+                    <li><a href="/dashboard/security">Seguridad</a></li>
                     <li>
                         <form method="POST" action="/auth/logout" style="display:inline">
                             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
