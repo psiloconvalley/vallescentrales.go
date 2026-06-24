@@ -1,0 +1,24 @@
+{{define "content"}}
+<div class="container">
+
+    <div class="page-header">
+        <h1>Propiedades</h1>
+        <p class="text-muted">Encuentra tu próxima propiedad en Oaxaca</p>
+    </div>
+
+    {{if .Listings}}
+    <div class="listing-grid">
+        {{range .Listings}}
+            {{template "listing_card" .}}
+        {{end}}
+    </div>
+    {{else}}
+    <div class="empty-state">
+        <h2>No hay propiedades disponibles</h2>
+        <p>Sé el primero en publicar una propiedad en los Valles Centrales.</p>
+        <a href="/listings/new" class="btn btn-primary mt-3">Publicar Propiedad →</a>
+    </div>
+    {{end}}
+
+</div>
+{{end}}

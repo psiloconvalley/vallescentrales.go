@@ -104,12 +104,11 @@ func (h *ListingHandler) HandleListListings(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	respond(w, http.StatusOK, map[string]any{
-		"listings":  listings,
-		"total":     total,
-		"page":      filter.Page,
-		"page_size": filter.PageSize,
-	})
+	h.render.Render(w, r, "listings.tmpl", h.pageData(r, "Propiedades", map[string]any{
+		"Listings": listings,
+		"Total":    total,
+		"Page":     filter.Page,
+	}))
 }
 
 // ─── Listing Detail ──────────────────────────────────────────────────────────
