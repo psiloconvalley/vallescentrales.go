@@ -240,8 +240,11 @@ func (h *ProfileHandler) HandleChangePassword(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// TODO: Add UpdatePassword method to user_repo
-	_ = newHash
+	if err := h.users.UpdatePassword(r.Context(), user.ID, newHash); err != nil {
+		slog.Error("failed to update password", "user_id", user.ID, "error", err)
+		h.renderSecurityError(w, r, user, "Error al cambiar la contraseña")
+		return
+	}
 
 	slog.Info("password changed", "user_id", user.ID)
 

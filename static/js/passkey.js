@@ -1,11 +1,15 @@
 // passkey.js — WebAuthn browser implementation
-// Handles passkey registration and login via the WebAuthn API.
+// Handles passkey registration, login, and deletion.
 // No dependencies. Pure vanilla JS.
-// Works with Face ID, Touch ID, Windows Hello, YubiKey.
 
 'use strict';
 
 // ─── Utility ────────────────────────────────────────────────────────────────
+
+function getCSRFToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+}
 
 function base64urlToBuffer(base64url) {
     const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
@@ -55,9 +59,9 @@ function encodeOptions(options) {
 
 function encodeCredential(credential) {
     const result = {
-        id:    credential.id,
+        id: credential.id,
         rawId: bufferToBase64url(credential.rawId),
-        type:  credential.type,
+        type: credential.type,
         response: {},
     };
 
@@ -78,30 +82,33 @@ function encodeCredential(credential) {
     return result;
 }
 
-// ─── Support Check ───────────────────────────────────────────────────────────
-
 function passkeySupported() {
-    return !!(navigator.credentials &&
-              window.PublicKeyCredential &&
-              typeof window.PublicKeyCredential === 'function');
+    return !!(
+        navigator.credentials &&
+        window.PublicKeyCredential &&
+        typeof window.PublicKeyCredential === 'function'
+    );
 }
 
 function getDeviceName() {
     const ua = navigator.userAgent;
-    if (/iPhone/.test(ua))  return 'iPhone';
-    if (/iPad/.test(ua))    return 'iPad';
+    if (/iPhone/.test(ua)) return 'iPhone';
+    if (/iPad/.test(ua)) return 'iPad';
     if (/Android/.test(ua)) return 'Android';
-    if (/Mac/.test(ua))     return 'Mac';
+    if (/Mac/.test(ua)) return 'Mac';
     if (/Windows/.test(ua)) return 'Windows PC';
     return 'Unknown Device';
 }
 
-// ─── Registration ────────────────────────────────────────────────────────────
+// ─── Registration ───────────────────────────────────────────────────────────
 
 async function registerPasskey(deviceName) {
     const beginResp = await fetch('/auth/passkey/register/begin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCSRFToken(),
+        },
         body: JSON.stringify({}),
     });
 
@@ -123,11 +130,14 @@ async function registerPasskey(deviceName) {
 
     const finishResp = await fetch('/auth/passkey/register/finish', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCSRFToken(),
+        },
         body: JSON.stringify({
-            flow_id:     flow_id,
+            flow_id: flow_id,
             device_name: deviceName || getDeviceName(),
-            credential:  encodeCredential(credential),
+            credential: encodeCredential(credential),
         }),
     });
 
@@ -139,7 +149,7 @@ async function registerPasskey(deviceName) {
     return await finishResp.json();
 }
 
-// ─── Login ───────────────────────────────────────────────────────────────────
+// ─── Login ──────────────────────────────────────────────────────────────────
 
 async function loginWithPasskey() {
     const beginResp = await fetch('/auth/passkey/login/begin', {
@@ -168,7 +178,7 @@ async function loginWithPasskey() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            flow_id:    flow_id,
+            flow_id: flow_id,
             credential: encodeCredential(assertion),
         }),
     });
@@ -186,24 +196,54 @@ async function loginWithPasskey() {
     return result;
 }
 
-// ─── DOM Wiring ──────────────────────────────────────────────────────────────
+// ─── Delete ─────────────────────────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', function () {
-
-    // Hide passkey UI if browser does not support it
-    if (!passkeySupported()) {
-        const section = document.getElementById('passkeySection');
-        if (section) section.style.display = 'none';
-        const registerSection = document.getElementById('passkeyRegisterSection');
-        if (registerSection) registerSection.style.display = 'none';
+async function deletePasskey(passkeyId) {
+    if (!confirm('¿Eliminar este passkey? No podrás usarlo para iniciar sesión.')) {
         return;
     }
 
-    // ── Login button ──
+    try {
+        const resp = await fetch('/auth/passkey/' + passkeyId, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCSRFToken(),
+            },
+            body: JSON.stringify({ passkey_id: passkeyId }),
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json();
+            alert(err.error || 'Error al eliminar passkey');
+            return;
+        }
+
+        window.location.reload();
+    } catch (e) {
+        alert('Error de conexión: ' + e.message);
+    }
+}
+
+// ─── DOM Wiring ─────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', function () {
+    if (!passkeySupported()) {
+        const section = document.getElementById('passkeySection');
+        if (section) section.style.display = 'none';
+
+        const registerSection = document.getElementById('passkeyRegisterSection');
+        if (registerSection) registerSection.style.display = 'none';
+
+        return;
+    }
+
+    // Login
     const loginBtn = document.getElementById('passkeyLoginBtn');
     if (loginBtn) {
         loginBtn.addEventListener('click', async function () {
             const status = document.getElementById('passkeyLoginStatus');
+
             loginBtn.disabled = true;
             loginBtn.textContent = 'Verificando...';
 
@@ -215,12 +255,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     status.className = 'passkey-status passkey-error';
                 }
                 loginBtn.disabled = false;
-                loginBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Continuar con Passkey';
+                loginBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Continuar con Passkey';
             }
         });
     }
 
-    // ── Register button ──
+    // Register
     const registerBtn = document.getElementById('registerPasskeyBtn');
     if (registerBtn) {
         registerBtn.addEventListener('click', async function () {

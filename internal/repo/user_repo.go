@@ -302,3 +302,19 @@ func (r *UserRepo) UpdateAvatar(ctx context.Context, id uuid.UUID, avatarURL str
 func isUniqueViolation(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "23505")
 }
+
+// UpdatePassword changes a user's password hash.
+// password_hash must already be an Argon2id hash.
+func (r *UserRepo) UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error {
+	query := `UPDATE users SET password_hash = $2 WHERE id = $1`
+
+	result, err := r.db.Exec(ctx, query, id, passwordHash)
+	if err != nil {
+		return fmt.Errorf("user_repo.UpdatePassword: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}
