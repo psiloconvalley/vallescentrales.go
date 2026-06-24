@@ -13,6 +13,7 @@ import (
 	"vallescentrales/internal/handlers"
 	"vallescentrales/internal/middleware"
 	"vallescentrales/internal/repo"
+	"vallescentrales/internal/services"
 )
 
 func main() {
@@ -57,6 +58,16 @@ func main() {
 		slog.Error("failed to initialize WebAuthn", "error", err)
 		os.Exit(1)
 	}
+
+	// Storage (Cloudflare R2)
+	storageSvc := services.NewStorageService(
+		cfg.R2AccountID,
+		cfg.R2AccessKey,
+		cfg.R2SecretKey,
+		cfg.R2Bucket,
+		cfg.R2PublicURL,
+	)
+	_ = storageSvc // wired to photo upload handler next
 
 	// Middleware
 	authMW := middleware.NewAuthMiddleware(sessionMgr, userRepo)
