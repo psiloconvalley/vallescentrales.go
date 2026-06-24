@@ -1,0 +1,116 @@
+{{define "content"}}
+<div class="container">
+    <div class="listing-detail">
+
+        <!-- Photo Gallery -->
+        <div class="listing-gallery">
+            {{if .Listing.Media}}
+                {{range .Listing.Media}}
+                <img src="{{.URL}}" alt="{{$.Listing.Title}}" class="listing-gallery-img" loading="lazy">
+                {{end}}
+            {{else}}
+                <div class="listing-gallery-empty">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <p>Sin fotos disponibles</p>
+                </div>
+            {{end}}
+        </div>
+
+        <!-- Listing Header -->
+        <div class="listing-header">
+            <div class="listing-header-top">
+                <span class="badge badge-{{.Listing.PropertyType}}">{{.Listing.PropertyType}}</span>
+                {{if .Listing.Status}}
+                <span class="status status-{{.Listing.Status}}">{{.Listing.Status}}</span>
+                {{end}}
+            </div>
+
+            <h1>{{.Listing.Title}}</h1>
+
+            <p class="listing-location">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                </svg>
+                {{.Listing.Municipality}}{{if .Listing.Community}}, {{.Listing.Community}}{{end}}
+            </p>
+        </div>
+
+        <!-- Price Card -->
+        <div class="listing-price-card">
+            <div class="listing-price-main">
+                ${{printf "%.0f" .Listing.PriceMXN}} <span class="listing-price-currency">MXN</span>
+            </div>
+            <div class="listing-price-note">Precio de venta</div>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="listing-details-grid">
+            {{if .Listing.AreaM2}}
+            <div class="listing-detail-item">
+                <div class="listing-detail-label">Superficie</div>
+                <div class="listing-detail-value">{{printf "%.0f" .Listing.AreaM2}} m²</div>
+            </div>
+            {{end}}
+
+            {{if .Listing.ConstructionM2}}
+            <div class="listing-detail-item">
+                <div class="listing-detail-label">Construcción</div>
+                <div class="listing-detail-value">{{printf "%.0f" .Listing.ConstructionM2}} m²</div>
+            </div>
+            {{end}}
+
+            <div class="listing-detail-item">
+                <div class="listing-detail-label">Tipo</div>
+                <div class="listing-detail-value">{{.Listing.PropertyType}}</div>
+            </div>
+
+            <div class="listing-detail-item">
+                <div class="listing-detail-label">Vistas</div>
+                <div class="listing-detail-value">{{.Listing.ViewCount}}</div>
+            </div>
+        </div>
+
+        <!-- Description -->
+        {{if .Listing.Description}}
+        <div class="listing-description">
+            <h2>Descripción</h2>
+            <p>{{.Listing.Description}}</p>
+        </div>
+        {{end}}
+
+        <!-- Contact CTA -->
+        <div class="listing-contact">
+            <h2>¿Te interesa esta propiedad?</h2>
+            <p class="text-muted">Contacta directamente al propietario</p>
+            <a href="#" class="btn btn-whatsapp">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.493l4.624-1.47A11.93 11.93 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.82c-2.169 0-4.18-.684-5.832-1.847l-.419-.248-4.342 1.38 1.453-4.248-.289-.458A9.82 9.82 0 012.18 12c0-5.423 4.397-9.82 9.82-9.82S21.82 6.577 21.82 12s-4.397 9.82-9.82 9.82z"/>
+                </svg>
+                Contactar por WhatsApp
+            </a>
+        </div>
+
+        <!-- Owner Actions (if owner is viewing) -->
+        {{if .User}}
+        {{if .Listing.IsOwnedBy .User.ID}}
+        <div class="listing-owner-actions">
+            <a href="/listings/{{.Listing.Slug}}/edit" class="btn btn-secondary">Editar Propiedad</a>
+            {{if eq (printf "%s" .Listing.Status) "draft"}}
+            <form method="POST" action="/listings/{{.Listing.Slug}}/publish" style="display:inline">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <button type="submit" class="btn btn-primary">Publicar</button>
+            </form>
+            {{end}}
+        </div>
+        {{end}}
+        {{end}}
+
+    </div>
+</div>
+{{end}}

@@ -190,3 +190,260 @@
     vertical-align: middle;
     margin-right: 4px;
 }
+
+
+/* ═══ LISTING DETAIL ═══ */
+
+.listing-detail {
+    max-width: 760px;
+    margin: 0 auto;
+}
+
+/* Gallery */
+.listing-gallery {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
+    margin-bottom: var(--s3);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.listing-gallery-img {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    display: block;
+    background: var(--bg);
+}
+
+.listing-gallery-img:first-child {
+    height: 300px;
+}
+
+.listing-gallery-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s1);
+    height: 220px;
+    background: var(--bg);
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius-lg);
+    color: var(--text-light);
+    text-align: center;
+    font-size: 0.875rem;
+}
+
+/* Header */
+.listing-header {
+    margin-bottom: var(--s3);
+}
+
+.listing-header-top {
+    display: flex;
+    align-items: center;
+    gap: var(--s1);
+    flex-wrap: wrap;
+    margin-bottom: var(--s1);
+}
+
+.listing-header h1 {
+    font-size: 2rem;
+    margin-bottom: 6px;
+}
+
+.listing-location {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.listing-location svg {
+    flex-shrink: 0;
+    color: var(--text-light);
+}
+
+/* Price */
+.listing-price-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--s3);
+    margin-bottom: var(--s3);
+    box-shadow: var(--shadow);
+}
+
+.listing-price-main {
+    font-family: var(--font-mono);
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: var(--obsidian);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+
+.listing-price-currency {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.listing-price-note {
+    font-size: 0.6875rem;
+    color: var(--text-light);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+}
+
+/* Details grid */
+.listing-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s2);
+    margin-bottom: var(--s3);
+}
+
+.listing-detail-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--s2);
+    box-shadow: var(--shadow);
+}
+
+.listing-detail-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-light);
+    margin-bottom: 4px;
+}
+
+.listing-detail-value {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+/* Description */
+.listing-description {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--s3);
+    margin-bottom: var(--s3);
+    box-shadow: var(--shadow);
+}
+
+.listing-description h2 {
+    font-size: 1.125rem;
+    margin-bottom: var(--s2);
+}
+
+.listing-description p {
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+    white-space: pre-wrap;
+}
+
+/* Contact CTA */
+.listing-contact {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--s3);
+    text-align: center;
+    margin-bottom: var(--s3);
+    box-shadow: var(--shadow);
+}
+
+.listing-contact h2 {
+    font-size: 1.125rem;
+    margin-bottom: 4px;
+}
+
+.listing-contact p {
+    margin-bottom: var(--s2);
+}
+
+.listing-contact .btn-whatsapp {
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+}
+
+/* Owner actions */
+.listing-owner-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s2);
+    padding: var(--s3);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--s4);
+}
+
+.listing-owner-actions .btn,
+.listing-owner-actions form {
+    width: 100%;
+}
+
+.listing-owner-actions form {
+    margin: 0;
+}
+
+/* Responsive */
+@media (min-width: 640px) {
+    .listing-gallery {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .listing-gallery-img {
+        height: 240px;
+    }
+
+    .listing-gallery-img:first-child {
+        grid-column: 1 / -1;
+        height: 360px;
+    }
+
+    .listing-gallery-empty {
+        height: 260px;
+    }
+
+    .listing-header h1 {
+        font-size: 2.25rem;
+    }
+
+    .listing-details-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .listing-price-main {
+        font-size: 2.25rem;
+    }
+
+    .listing-contact .btn-whatsapp {
+        width: auto;
+        min-width: 260px;
+    }
+
+    .listing-owner-actions {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .listing-owner-actions .btn,
+    .listing-owner-actions form {
+        width: auto;
+    }
+}

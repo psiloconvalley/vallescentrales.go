@@ -146,7 +146,9 @@ func (h *ListingHandler) HandleGetListing(w http.ResponseWriter, r *http.Request
 		}
 	}(context.Background(), listing.ID)
 
-	respond(w, http.StatusOK, listing)
+	h.render.Render(w, r, "listing_detail.tmpl", h.pageData(r, listing.Title, map[string]any{
+		"Listing": listing,
+	}))
 }
 
 // ─── Create Listing ──────────────────────────────────────────────────────────
