@@ -1,0 +1,147 @@
+{{define "content"}}
+<div class="container">
+    <div class="profile-edit-page">
+
+        <div class="page-header">
+            <h1>Editar Propiedad</h1>
+            <p class="text-muted">Completa tu borrador, sube fotos y publícalo cuando esté listo.</p>
+        </div>
+
+        {{if .Error}}
+        <div class="flash flash-error">{{.Error}}</div>
+        {{end}}
+
+        {{if .Success}}
+        <div class="flash flash-success">{{.Success}}</div>
+        {{end}}
+
+        <!-- Draft / status summary -->
+        <div class="profile-section">
+            <h2>Resumen</h2>
+
+            <div class="listing-header-top mb-2">
+                <span class="badge badge-{{.Listing.PropertyType}}">{{.Listing.PropertyType}}</span>
+                <span class="status status-{{.Listing.Status}}">{{.Listing.Status}}</span>
+            </div>
+
+            <h3 class="mb-1">{{.Listing.Title}}</h3>
+            <p class="text-muted text-sm">{{.Listing.Municipality}}{{if .Listing.Community}}, {{.Listing.Community}}{{end}}</p>
+
+            <div class="listing-price-card mt-3">
+                <div class="listing-price-main">
+                    ${{printf "%.0f" .Listing.PriceMXN}} <span class="listing-price-currency">MXN</span>
+                </div>
+                <div class="listing-price-note">Precio actual</div>
+            </div>
+        </div>
+
+        <!-- Photos -->
+        <div class="profile-section">
+            <h2>Fotos</h2>
+
+            {{if .Listing.Media}}
+            <div class="listing-gallery mb-3">
+                {{range .Listing.Media}}
+                <img src="{{.URL}}" alt="{{$.Listing.Title}}" class="listing-gallery-img" loading="lazy">
+                {{end}}
+            </div>
+            {{else}}
+            <div class="listing-gallery-empty mb-3">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                <p>Tu propiedad aún no tiene fotos</p>
+            </div>
+            {{end}}
+
+            <form method="POST" action="/listings/{{.Listing.Slug}}/photos" enctype="multipart/form-data" novalidate>
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+                <div class="avatar-upload">
+                    <input type="file" id="photos" name="photos" class="avatar-upload-input"
+                           accept="image/jpeg,image/png,image/webp" multiple required>
+                    <label for="photos" class="avatar-upload-label">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        Seleccionar fotos
+                    </label>
+                    <span class="avatar-upload-name" id="listingPhotoFileName"></span>
+
+                    <button type="submit" class="btn btn-secondary avatar-upload-btn hidden" id="listingPhotoSubmitBtn">
+                        Subir Fotos
+                    </button>
+                </div>
+
+                <div class="avatar-upload-hint">
+                    JPEG, PNG o WebP · Máximo 10MB por imagen · Hasta 20 fotos
+                </div>
+            </form>
+        </div>
+
+        <!-- Property details preview -->
+        <div class="profile-section">
+            <h2>Detalles</h2>
+
+            <div class="listing-details-grid">
+                {{if .Listing.AreaM2}}
+                <div class="listing-detail-item">
+                    <div class="listing-detail-label">Superficie</div>
+                    <div class="listing-detail-value">{{printf "%.0f" .Listing.AreaM2}} m²</div>
+                </div>
+                {{end}}
+
+                {{if .Listing.ConstructionM2}}
+                <div class="listing-detail-item">
+                    <div class="listing-detail-label">Construcción</div>
+                    <div class="listing-detail-value">{{printf "%.0f" .Listing.ConstructionM2}} m²</div>
+                </div>
+                {{end}}
+
+                <div class="listing-detail-item">
+                    <div class="listing-detail-label">Tipo</div>
+                    <div class="listing-detail-value">{{.Listing.PropertyType}}</div>
+                </div>
+
+                <div class="listing-detail-item">
+                    <div class="listing-detail-label">Estado</div>
+                    <div class="listing-detail-value">{{.Listing.Status}}</div>
+                </div>
+            </div>
+
+            {{if .Listing.Description}}
+            <div class="listing-description mt-3">
+                <h2>Descripción</h2>
+                <p>{{.Listing.Description}}</p>
+            </div>
+            {{end}}
+        </div>
+
+        <!-- Actions -->
+        <div class="profile-section">
+            <h2>Acciones</h2>
+
+            <div class="profile-actions">
+                <a href="/listings/{{.Listing.Slug}}" class="btn btn-secondary">Vista Previa</a>
+
+                {{if eq .Listing.Status "draft"}}
+                <form method="POST" action="/listings/{{.Listing.Slug}}/publish">
+                    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                    <button type="submit" class="btn btn-primary">Publicar</button>
+                </form>
+                {{end}}
+
+                <form method="POST" action="/listings/{{.Listing.Slug}}/delete">
+                    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                    <button type="submit" class="btn btn-danger">Archivar</button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{{end}}

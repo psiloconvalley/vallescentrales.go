@@ -52,6 +52,8 @@ func (h *ListingHandler) pageData(r *http.Request, title string, extra map[strin
 	return data
 }
 
+// ─── Home ────────────────────────────────────────────────────────────────────
+
 // HandleHome serves the homepage with featured listings.
 func (h *ListingHandler) HandleHome(w http.ResponseWriter, r *http.Request) {
 	filter := repo.ListFilter{Page: 1, PageSize: 6}
@@ -66,7 +68,9 @@ func (h *ListingHandler) HandleHome(w http.ResponseWriter, r *http.Request) {
 	}))
 }
 
-// HandleListListings returns active listings with optional filters.
+// ─── Browse Listings ─────────────────────────────────────────────────────────
+
+// HandleListListings currently returns JSON until listings.tmpl is built.
 func (h *ListingHandler) HandleListListings(w http.ResponseWriter, r *http.Request) {
 	filter := repo.ListFilter{Page: 1, PageSize: 20}
 
@@ -108,7 +112,9 @@ func (h *ListingHandler) HandleListListings(w http.ResponseWriter, r *http.Reque
 	})
 }
 
-// HandleGetListing returns a single listing by slug.
+// ─── Listing Detail ──────────────────────────────────────────────────────────
+
+// HandleGetListing renders a single listing by slug.
 func (h *ListingHandler) HandleGetListing(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 	if slug == "" {
@@ -201,13 +207,13 @@ func (h *ListingHandler) HandleCreateListing(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	title          := strings.TrimSpace(r.FormValue("title"))
-	propertyType   := strings.TrimSpace(r.FormValue("property_type"))
-	priceStr       := strings.TrimSpace(r.FormValue("price_mxn"))
-	municipality   := strings.TrimSpace(r.FormValue("municipality"))
-	community      := strings.TrimSpace(r.FormValue("community"))
-	description    := strings.TrimSpace(r.FormValue("description"))
-	areaStr        := strings.TrimSpace(r.FormValue("area_m2"))
+	title := strings.TrimSpace(r.FormValue("title"))
+	propertyType := strings.TrimSpace(r.FormValue("property_type"))
+	priceStr := strings.TrimSpace(r.FormValue("price_mxn"))
+	municipality := strings.TrimSpace(r.FormValue("municipality"))
+	community := strings.TrimSpace(r.FormValue("community"))
+	description := strings.TrimSpace(r.FormValue("description"))
+	areaStr := strings.TrimSpace(r.FormValue("area_m2"))
 	constructionStr := strings.TrimSpace(r.FormValue("construction_m2"))
 
 	fd := listingFormData{
@@ -221,7 +227,6 @@ func (h *ListingHandler) HandleCreateListing(w http.ResponseWriter, r *http.Requ
 		ConstructionM2: constructionStr,
 	}
 
-	// Validate required fields
 	if title == "" || propertyType == "" || priceStr == "" || municipality == "" {
 		h.renderListingForm(w, r, "Título, tipo, precio y municipio son obligatorios", fd)
 		return
@@ -229,6 +234,11 @@ func (h *ListingHandler) HandleCreateListing(w http.ResponseWriter, r *http.Requ
 
 	if len(title) < 10 {
 		h.renderListingForm(w, r, "El título debe tener al menos 10 caracteres", fd)
+		return
+	}
+
+	if !catalog.ValidMunicipality(municipality) {
+		h.renderListingForm(w, r, "Municipio inválido", fd)
 		return
 	}
 
@@ -280,7 +290,95 @@ func (h *ListingHandler) HandleCreateListing(w http.ResponseWriter, r *http.Requ
 		"slug", listing.Slug,
 	)
 
-	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+	http.Redirect(w, r, "/listings/"+listing.Slug+"/edit", http.StatusSeeOther)
+}
+
+// ─── Edit Listing ────────────────────────────────────────────────────────────
+
+// HandleEditListingPage serves the listing edit form with photo upload.
+func (h *ListingHandler) HandleEditListingPage(w http.ResponseWriter, r *http.Request) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		return
+	}
+
+	slug := chi.URLParam(r, "slug")
+	listing, err := h.listings.GetBySlug(r.Context(), slug)
+	if err != nil {
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		return
+	}
+
+	if !listing.IsOwnedBy(user.ID) && !user.IsAdmin() {
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		return
+	}
+
+	media, _ := h.listings.GetMedia(r.Context(), listing.ID)
+	listing.Media = media
+
+	h.render.Render(w, r, "listing_edit.tmpl", h.pageData(r, "Editar Propiedad", map[string]any{
+		"Listing":        listing,
+		"Regions":        catalog.Regions(),
+		"Municipalities": catalog.MunicipalitiesByRegion(),
+	}))
+}
+
+// HandleEditListing processes the edit form.
+// TODO: full listing update save next.
+func (h *ListingHandler) HandleEditListing(w http.ResponseWriter, r *http.Request) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		return
+	}
+
+	slug := chi.URLParam(r, "slug")
+	listing, err := h.listings.GetBySlug(r.Context(), slug)
+	if err != nil {
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		return
+	}
+
+	if !listing.IsOwnedBy(user.ID) && !user.IsAdmin() {
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		return
+	}
+
+	// Placeholder until repo.UpdateListing exists
+	http.Redirect(w, r, "/listings/"+listing.Slug, http.StatusSeeOther)
+}
+
+// HandlePublishListing changes a listing from draft to active.
+func (h *ListingHandler) HandlePublishListing(w http.ResponseWriter, r *http.Request) {
+	user := middleware.UserFromContext(r.Context())
+	if user == nil {
+		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		return
+	}
+
+	slug := chi.URLParam(r, "slug")
+	listing, err := h.listings.GetBySlug(r.Context(), slug)
+	if err != nil {
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		return
+	}
+
+	if !listing.IsOwnedBy(user.ID) && !user.IsAdmin() {
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		return
+	}
+
+	_, err = h.listings.Publish(r.Context(), listing.ID)
+	if err != nil {
+		slog.Error("failed to publish listing", "listing_id", listing.ID, "error", err)
+		http.Redirect(w, r, "/listings/"+listing.Slug, http.StatusSeeOther)
+		return
+	}
+
+	slog.Info("listing published", "listing_id", listing.ID, "owner_id", user.ID)
+	http.Redirect(w, r, "/listings/"+listing.Slug, http.StatusSeeOther)
 }
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────

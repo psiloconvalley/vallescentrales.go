@@ -55,4 +55,21 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
+    // ── Listing photo file input ──
+    var photoInput = document.getElementById("photos");
+    var photoName = document.getElementById("listingPhotoFileName");
+    var photoBtn = document.getElementById("listingPhotoSubmitBtn");
+
+    if (photoInput && photoName && photoBtn) {
+        photoInput.addEventListener("change", function () {
+            if (photoInput.files.length > 0) {
+                photoName.textContent = photoInput.files.length + " archivo(s) seleccionado(s)";
+                photoBtn.classList.remove("hidden");
+            } else {
+                photoName.textContent = "";
+                photoBtn.classList.add("hidden");
+            }
+        });
+    }
 });

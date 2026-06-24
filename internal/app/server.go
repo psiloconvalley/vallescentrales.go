@@ -181,9 +181,10 @@ func (s *Server) mountRoutes() {
 			// Listing management
 			r.Get("/listings/new", s.listingH.HandleNewListingPage)
 			r.Post("/listings/new", s.listingH.HandleCreateListing)
-			r.Get("/listings/{slug}/edit", s.handleEditListingPage)
-			r.Post("/listings/{slug}/edit", s.handleEditListing)
+			r.Get("/listings/{slug}/edit", s.listingH.HandleEditListingPage)
+			r.Post("/listings/{slug}/edit", s.listingH.HandleEditListing)
 			r.Post("/listings/{slug}/delete", s.listingH.HandleDeleteListing)
+			r.Post("/listings/{slug}/publish", s.listingH.HandlePublishListing)
 			r.Post("/listings/{slug}/photos", s.uploadH.HandleUploadListingPhotos)
 		})
 	})
@@ -203,17 +204,6 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprintf(w, `{"status":"ok","env":%q}`, s.cfg.AppEnv)
 }
 
-func (s *Server) handleEditListingPage(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusNotImplemented)
-	_, _ = w.Write([]byte(`{"error":"not implemented"}`))
-}
-
-func (s *Server) handleEditListing(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusNotImplemented)
-	_, _ = w.Write([]byte(`{"error":"not implemented"}`))
-}
 
 func (s *Server) Start() error {
 	srv := &http.Server{
