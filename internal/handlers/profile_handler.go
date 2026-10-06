@@ -1,6 +1,5 @@
 // internal/handlers/profile_handler.go
 // Profile and security settings endpoints.
-// Rule 42: handlers = HTTP only. No SQL. No business logic.
 
 package handlers
 
@@ -10,28 +9,30 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+
 	"vallescentrales/internal/auth"
 	"vallescentrales/internal/middleware"
 	"vallescentrales/internal/repo"
 )
 
-// ProfileHandler handles profile and security settings.
 type ProfileHandler struct {
 	users    *repo.UserRepo
 	passkeys *repo.PasskeyRepo
+	listings *repo.ListingRepo // Added to display properties on public profile
 	render   Renderer
 }
 
-// NewProfileHandler creates a ProfileHandler.
-func NewProfileHandler(users *repo.UserRepo, passkeys *repo.PasskeyRepo, render Renderer) *ProfileHandler {
+func NewProfileHandler(users *repo.UserRepo, passkeys *repo.PasskeyRepo, listings *repo.ListingRepo, render Renderer) *ProfileHandler {
 	return &ProfileHandler{
 		users:    users,
 		passkeys: passkeys,
+		listings: listings,
 		render:   render,
 	}
 }
 
-// pageData builds standard template data.
 func (h *ProfileHandler) pageData(r *http.Request, title string, extra map[string]any) map[string]any {
 	data := map[string]any{
 		"Meta": map[string]string{
@@ -50,11 +51,10 @@ func (h *ProfileHandler) pageData(r *http.Request, title string, extra map[strin
 
 // ─── Profile Edit ────────────────────────────────────────────────────────────
 
-// HandleProfileEditPage serves the profile edit form.
 func (h *ProfileHandler) HandleProfileEditPage(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
@@ -64,11 +64,10 @@ func (h *ProfileHandler) HandleProfileEditPage(w http.ResponseWriter, r *http.Re
 	}))
 }
 
-// HandleProfileSave processes the profile edit form submission.
 func (h *ProfileHandler) HandleProfileSave(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
@@ -81,15 +80,15 @@ func (h *ProfileHandler) HandleProfileSave(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	fullName      := strings.TrimSpace(r.FormValue("full_name"))
-	displayName   := nullableString(strings.TrimSpace(r.FormValue("display_name")))
-	username      := nullableString(strings.ToLower(strings.TrimSpace(r.FormValue("username"))))
-	bio           := nullableString(strings.TrimSpace(r.FormValue("bio")))
-	website       := nullableString(strings.TrimSpace(r.FormValue("website")))
-	location      := nullableString(strings.TrimSpace(r.FormValue("location")))
-	agencyName    := nullableString(strings.TrimSpace(r.FormValue("agency_name")))
-	phone         := nullableString(strings.TrimSpace(r.FormValue("phone")))
-	whatsapp      := nullableString(strings.TrimSpace(r.FormValue("whatsapp")))
+	fullName := strings.TrimSpace(r.FormValue("full_name"))
+	displayName := nullableString(strings.TrimSpace(r.FormValue("display_name")))
+	username := nullableString(strings.ToLower(strings.TrimSpace(r.FormValue("username"))))
+	bio := nullableString(strings.TrimSpace(r.FormValue("bio")))
+	website := nullableString(strings.TrimSpace(r.FormValue("website")))
+	location := nullableString(strings.TrimSpace(r.FormValue("location")))
+	agencyName := nullableString(strings.TrimSpace(r.FormValue("agency_name")))
+	phone := nullableString(strings.TrimSpace(r.FormValue("phone")))
+	whatsapp := nullableString(strings.TrimSpace(r.FormValue("whatsapp")))
 	preferredLang := r.FormValue("preferred_lang")
 	if preferredLang == "" {
 		preferredLang = "es"
@@ -100,9 +99,9 @@ func (h *ProfileHandler) HandleProfileSave(w http.ResponseWriter, r *http.Reques
 		languages = []string{"es"}
 	}
 
-	showPhone    := r.FormValue("show_phone") == "on"
+	showPhone := r.FormValue("show_phone") == "on"
 	showWhatsApp := r.FormValue("show_whatsapp") == "on"
-	notifyEmail  := r.FormValue("notify_email") == "on"
+	notifyEmail := r.FormValue("notify_email") == "on"
 
 	if fullName == "" {
 		h.render.Render(w, r, "profile_edit.tmpl", h.pageData(r, "Perfil", map[string]any{
@@ -134,19 +133,19 @@ func (h *ProfileHandler) HandleProfileSave(w http.ResponseWriter, r *http.Reques
 	}
 
 	input := repo.UpdateProfileInput{
-		FullName:      fullName,
-		DisplayName:   displayName,
-		Username:      username,
-		Bio:           bio,
-		Website:       website,
-		Location:      location,
-		AgencyName:    agencyName,
-		Phone:         phone,
-		WhatsApp:      whatsapp,
-		Languages:     languages,
-		ShowPhone:     showPhone,
-		ShowWhatsApp:  showWhatsApp,
-		NotifyEmail:   notifyEmail,
+		FullName:     fullName,
+		DisplayName:  displayName,
+		Username:     username,
+		Bio:          bio,
+		Website:      website,
+		Location:     location,
+		AgencyName:   agencyName,
+		Phone:        phone,
+		WhatsApp:     whatsapp,
+		Languages:    languages,
+		ShowPhone:    showPhone,
+		ShowWhatsApp: showWhatsApp,
+		NotifyEmail:  notifyEmail,
 		PreferredLang: preferredLang,
 	}
 
@@ -177,11 +176,10 @@ func (h *ProfileHandler) HandleProfileSave(w http.ResponseWriter, r *http.Reques
 
 // ─── Security ────────────────────────────────────────────────────────────────
 
-// HandleSecurityPage serves the security settings page.
 func (h *ProfileHandler) HandleSecurityPage(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
@@ -197,56 +195,46 @@ func (h *ProfileHandler) HandleSecurityPage(w http.ResponseWriter, r *http.Reque
 	}))
 }
 
-// HandleChangePassword processes a password change for email users.
 func (h *ProfileHandler) HandleChangePassword(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		http.Redirect(w, r, "/dashboard/security", http.StatusSeeOther)
+		http.Redirect(w, r, "/cuenta/seguridad", http.StatusSeeOther)
 		return
 	}
 
 	currentPassword := r.FormValue("current_password")
-	newPassword     := r.FormValue("new_password")
+	newPassword := r.FormValue("new_password")
 
-	// Verify current password
 	if !user.HasPassword() {
 		h.renderSecurityError(w, r, user, "Tu cuenta no usa contraseña")
 		return
 	}
 
 	if err := auth.VerifyPassword(currentPassword, *user.PasswordHash); err != nil {
-		h.renderSecurityError(w, r, user, "Contraseña actual incorrecta")
+		h.renderSecurityError(w, r, user, "La contraseña actual es incorrecta")
 		return
 	}
 
-	// Hash new password
 	newHash, err := auth.HashPassword(newPassword)
 	if err != nil {
+		errMsg := "Error al actualizar contraseña"
 		if errors.Is(err, auth.ErrPasswordTooShort) {
-			h.renderSecurityError(w, r, user, "La nueva contraseña debe tener al menos 12 caracteres")
-			return
+			errMsg = "La nueva contraseña debe tener al menos 12 caracteres"
 		}
-		if errors.Is(err, auth.ErrPasswordTooLong) {
-			h.renderSecurityError(w, r, user, "La nueva contraseña debe tener 72 caracteres o menos")
-			return
-		}
-		slog.Error("failed to hash new password", "user_id", user.ID, "error", err)
-		h.renderSecurityError(w, r, user, "Error al cambiar la contraseña")
+		h.renderSecurityError(w, r, user, errMsg)
 		return
 	}
 
 	if err := h.users.UpdatePassword(r.Context(), user.ID, newHash); err != nil {
 		slog.Error("failed to update password", "user_id", user.ID, "error", err)
-		h.renderSecurityError(w, r, user, "Error al cambiar la contraseña")
+		h.renderSecurityError(w, r, user, "Error al guardar nueva contraseña")
 		return
 	}
-
-	slog.Info("password changed", "user_id", user.ID)
 
 	passkeys, _ := h.passkeys.ListByUserID(r.Context(), user.ID)
 
@@ -257,7 +245,6 @@ func (h *ProfileHandler) HandleChangePassword(w http.ResponseWriter, r *http.Req
 	}))
 }
 
-// renderSecurityError renders the security page with an error message.
 func (h *ProfileHandler) renderSecurityError(w http.ResponseWriter, r *http.Request, user interface{}, errMsg string) {
 	passkeys, _ := h.passkeys.ListByUserID(r.Context(), middleware.UserFromContext(r.Context()).ID)
 
@@ -268,9 +255,45 @@ func (h *ProfileHandler) renderSecurityError(w http.ResponseWriter, r *http.Requ
 	}))
 }
 
-// HandlePublicProfile serves a user's public profile page.
+// HandlePublicProfile serves a user's public profile page showcasing all their active properties.
 func (h *ProfileHandler) HandlePublicProfile(w http.ResponseWriter, r *http.Request) {
-	http.NotFound(w, r)
+	idStr := chi.URLParam(r, "id")
+	userID, err := uuid.Parse(idStr)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	profileUser, err := h.users.GetByID(r.Context(), userID)
+	if err != nil {
+		if errors.Is(err, repo.ErrNotFound) {
+			http.NotFound(w, r)
+			return
+		}
+		slog.Error("failed to get user for public profile", "user_id", userID, "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Fetch all properties posted by this owner
+	listings, err := h.listings.ListByOwner(r.Context(), userID)
+	if err != nil {
+		slog.Error("failed to fetch listings for public profile", "user_id", userID, "error", err)
+		listings = nil
+	}
+
+	// Filter down to active listings for general public display
+	var activeListings []any
+	for _, l := range listings {
+		if l.Status == "active" || l.Status == "under_contract" || l.Status == "sold" {
+			activeListings = append(activeListings, l)
+		}
+	}
+
+	h.render.Render(w, r, "profile_public.tmpl", h.pageData(r, profileUser.DisplayNameOrFull(), map[string]any{
+		"Profile":  profileUser,
+		"Listings": activeListings,
+	}))
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

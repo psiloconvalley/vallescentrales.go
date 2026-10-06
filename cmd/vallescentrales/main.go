@@ -73,7 +73,7 @@ func main() {
 	// Middleware
 	authMW := middleware.NewAuthMiddleware(sessionMgr, userRepo)
 
-	// Templates
+		// Templates
 	tmpl, err := app.NewTemplateRenderer(currencySvc)
 	if err != nil {
 		slog.Error("failed to parse templates", "error", err)
@@ -83,17 +83,12 @@ func main() {
 	// Handlers
 	authH := handlers.NewAuthHandler(userRepo, sessionMgr, googleAuth, tmpl)
 	listingH := handlers.NewListingHandler(listingRepo, userRepo, tmpl)
-	profileH := handlers.NewProfileHandler(userRepo, passkeyRepo, tmpl)
+	profileH := handlers.NewProfileHandler(userRepo, passkeyRepo, listingRepo, tmpl)
 	passkeyH := handlers.NewPasskeyHandler(webAuthn, passkeyRepo, userRepo, sessionMgr)
 	uploadH := handlers.NewUploadHandler(storageSvc, listingRepo, userRepo)
 
 	// Server
 	server, err := app.NewServer(cfg, db, authMW, authH, listingH, profileH, passkeyH, uploadH, tmpl)
-	if err != nil {
-		slog.Error("failed to build server", "error", err)
-		os.Exit(1)
-	}
-
 	if err := server.Start(); err != nil {
 		slog.Error("server stopped with error", "error", err)
 		os.Exit(1)

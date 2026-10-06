@@ -1,0 +1,47 @@
+{{define "content"}}
+<div class="container py-5">
+    <div class="profile-header mb-5">
+        <div class="profile-avatar">
+            {{if .Profile.AvatarURL}}
+                <img src="{{.Profile.AvatarURL}}" alt="{{.Profile.DisplayNameOrFull}}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+            {{else}}
+                {{.Profile.InitialLetter}}
+            {{end}}
+        </div>
+        <div class="profile-info">
+            <h1>{{.Profile.DisplayNameOrFull}}</h1>
+            {{if .Profile.AgencyName}}
+                <p class="text-muted" style="font-weight:600;">🏢 {{.Profile.AgencyName}}</p>
+            {{end}}
+            
+            {{if .Profile.Bio}}
+                <p class="mt-2 text-muted" style="max-width: 500px; font-style: italic;">"{{.Profile.Bio}}"</p>
+            {{end}}
+
+            <div class="d-flex gap-3 flex-wrap mt-3 font-sm" style="color: var(--text-light);">
+                {{if .Profile.Location}}
+                    <span>📍 {{.Profile.Location}}</span>
+                {{end}}
+                {{if .Profile.Website}}
+                    <span>🌐 <a href="{{.Profile.Website}}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">{{.Profile.Website}}</a></span>
+                {{end}}
+            </div>
+        </div>
+    </div>
+
+    <!-- Listings Section -->
+    <h2 class="mb-4">Propiedades de {{.Profile.DisplayNameOrFull}}</h2>
+    {{if .Listings}}
+        <div class="listing-grid">
+            {{range .Listings}}
+                {{template "listing_card" .}}
+            {{end}}
+        </div>
+    {{else}}
+        <div class="empty-state text-center py-5">
+            <h2>Sin propiedades activas</h2>
+            <p class="text-muted">Este usuario no tiene propiedades publicadas en este momento.</p>
+        </div>
+    {{end}}
+</div>
+{{end}}

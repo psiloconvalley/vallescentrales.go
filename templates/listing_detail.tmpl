@@ -1,82 +1,83 @@
 {{define "content"}}
 <div class="container py-4">
-    <!-- Breadcrumb -->
-    <nav class="breadcrumb" aria-label="Navegación secundaria">
-        <a href="/propiedades" class="breadcrumb-link">← Volver a Propiedades</a>
+    <!-- Breadcrumbs -->
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <ol class="d-flex gap-1 flex-wrap">
+            <li><a href="/">Inicio</a></li>
+            <li class="separator">/</li>
+            <li><a href="/propiedades">Propiedades</a></li>
+            <li class="separator">/</li>
+            <li aria-current="page" class="active">{{.Listing.Title}}</li>
+        </ol>
     </nav>
 
-    <main class="listing-detail-grid mt-3">
-        <!-- Left Column: Media & Information -->
-        <article class="listing-main-content">
-            <header class="listing-detail-header">
-                <span class="badge badge-primary">{{.Listing.PropertyType}}</span>
-                <h1 class="listing-title mt-1">{{.Listing.Title}}</h1>
-                <p class="listing-location text-muted">
-                    📍 {{.Listing.Municipality}}
-                    {{if .Listing.Community}}• {{.Listing.Community}}{{end}}
-                </p>
-                <div class="listing-price-tag mt-2">
-                    <span class="price-mxn">{{formatMXN .Listing.PriceMXN}}</span>
-                    <span class="price-usd text-muted">({{formatUSD (convertToUSD .Listing.PriceMXN)}} USD)</span>
+    <main class="detail-grid mt-3">
+        <!-- Left Column: Content -->
+        <article class="listing-detail">
+            <!-- Gallery -->
+            <div class="listing-gallery">
+                {{if .Listing.Media}}
+                    {{range .Listing.Media}}
+                        <img src="{{.URL}}" alt="Foto de {{$.Listing.Title}}" class="listing-gallery-img" loading="lazy">
+                    {{end}}
+                {{else}}
+                    <div class="listing-gallery-empty">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                        <span>Sin imágenes disponibles</span>
+                    </div>
+                {{endif}}
+            </div>
+
+            <!-- Header -->
+            <header class="listing-header">
+                <div class="listing-header-top">
+                    <span class="badge badge-{{.Listing.Type}}">{{.Listing.GetFormattedType}}</span>
+                    <span class="status status-{{.Listing.Status}}">{{.Listing.GetFormattedStatus}}</span>
+                </div>
+                <h1>{{.Listing.Title}}</h1>
+                <div class="listing-location">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    <span>{{.Listing.Municipality}}, Oaxaca</span>
                 </div>
             </header>
 
-            <!-- Gallery -->
-            <section class="listing-gallery mt-4">
-                {{if .Listing.Media}}
-                    <div class="gallery-viewport">
-                        {{$primary := .Listing.PrimaryPhoto}}
-                        <img id="activeGalleryImage" src="{{$primary.URL}}" alt="{{.Listing.Title}}" class="gallery-active-img">
-                    </div>
-                    {{if gt (len .Listing.Media) 1}}
-                        <div class="gallery-thumbnails mt-2">
-                            {{range .Listing.Media}}
-                                <button type="button" class="gallery-thumb-btn" onclick="document.getElementById('activeGalleryImage').src='{{.URL}}'">
-                                    <img src="{{.URL}}" alt="Miniatura de la propiedad" class="gallery-thumb-img">
-                                </button>
-                            {{end}}
-                        </div>
+            <!-- Price & Key Details Box -->
+            <div class="listing-price-card">
+                <div class="listing-price-main">
+                    {{if eq .Listing.Currency "MXN"}}
+                        {{formatMXN .Listing.Price}} <span class="listing-price-currency">MXN</span>
+                        <div class="listing-price-usd">≈ {{formatUSD (convertToUSD .Listing.Price)}} USD</div>
+                    {{else}}
+                        {{formatUSD .Listing.Price}} <span class="listing-price-currency">USD</span>
                     {{end}}
-                {{else}}
-                    <div class="gallery-placeholder">
-                        <span class="placeholder-icon">🏡</span>
-                        <p>No hay fotos disponibles para esta propiedad</p>
-                    </div>
-                {{end}}
-            </section>
-
-            <!-- Specifications Grid -->
-            <section class="listing-specs mt-4">
-                <h2 class="section-title">Características principales</h2>
-                <div class="specs-grid mt-2">
-                    <div class="spec-card">
-                        <span class="spec-label">Tipo de Propiedad</span>
-                        <span class="spec-value">{{.Listing.PropertyType}}</span>
-                    </div>
-                    {{if .Listing.AreaM2}}
-                    <div class="spec-card">
-                        <span class="spec-label">Terreno (M²)</span>
-                        <span class="spec-value">{{.Listing.AreaM2}} m²</span>
-                    </div>
-                    {{end}}
-                    {{if .Listing.ConstructionM2}}
-                    <div class="spec-card">
-                        <span class="spec-label">Construcción (M²)</span>
-                        <span class="spec-value">{{.Listing.ConstructionM2}} m²</span>
-                    </div>
-                    {{end}}
-                    <div class="spec-card">
-                        <span class="spec-label">Vistas</span>
-                        <span class="spec-value">👁️ {{.Listing.ViewCount}}</span>
-                    </div>
                 </div>
-            </section>
+                <div class="listing-price-note">Trato Directo • Sin intermediarios</div>
+            </div>
+
+            <!-- Attributes Grid -->
+            <div class="listing-details-grid">
+                <div class="listing-detail-item">
+                    <div class="listing-detail-label">Área total</div>
+                    <div class="listing-detail-value">{{.Listing.AreaSqM}} m²</div>
+                </div>
+                <div class="listing-detail-item">
+                    <div class="listing-detail-label">Tenencia</div>
+                    <div class="listing-detail-value">{{.Listing.GetFormattedTenure}}</div>
+                </div>
+            </div>
 
             <!-- Description -->
             {{if .Listing.Description}}
-            <section class="listing-description mt-4">
-                <h2 class="section-title">Descripción</h2>
-                <div class="description-body mt-2">
+            <section class="listing-description">
+                <h2>Descripción de la propiedad</h2>
+                <div class="listing-description-body">
                     <p>{{.Listing.Description}}</p>
                 </div>
             </section>
@@ -86,17 +87,27 @@
         <!-- Right Column: Contact Card Widget (Securely Gated) -->
         <aside class="listing-sidebar">
             <div class="listing-contact">
-                {{if .IsOwner}}
-                    <h2>Esta es tu propiedad</h2>
-                    <p class="text-muted">Puedes administrar esta publicación desde tu panel de control.</p>
-                    <div class="owner-contact-actions mt-3">
-                        <a href="/propiedades/{{.Listing.Slug}}/editar" class="btn btn-outline btn-block">Editar Publicación</a>
+					  <!-- Seller mini storefront card -->
+                <div class="seller-profile-card mb-4">
+                    <div class="seller-avatar-container">
+                        {{if .Owner.AvatarURL}}
+                            <img src="{{.Owner.AvatarURL}}" alt="{{.Owner.DisplayNameOrFull}}" class="seller-avatar">
+                        {{else}}
+                            <span class="seller-avatar-initial">{{.Owner.InitialLetter}}</span>
+                        {{end}}
                     </div>
-                {{else if .CanContact}}
-                    <h2>¿Te interesa esta propiedad?</h2>
-                    <p class="text-muted">Contacta directamente al propietario:</p>
-                    <div class="contact-methods-grid mt-3">
-                        <!-- Direct Email Connection -->
+                    <div class="seller-details">
+                        <span class="seller-label">Vendedor Autorizado</span>
+                        <h3 class="seller-name">
+                            <a href="/usuarios/{{.Owner.ID}}">{{.Owner.DisplayNameOrFull}}</a>
+                        </h3>
+                        {{if .Owner.AgencyName}}
+                            <span class="seller-agency">🏢 {{.Owner.AgencyName}}</span>
+                        {{end}}
+                        <a href="/usuarios/{{.Owner.ID}}" class="seller-view-profile">Ver perfil completo →</a>
+                    </div>
+                </div>
+                                        <!-- Direct Email Connection -->
                         <a href="mailto:{{.Owner.Email}}?subject=Interés en propiedad: {{.Listing.Title}}" class="btn btn-outline btn-block">
                             ✉️ Contactar por Correo
                         </a>

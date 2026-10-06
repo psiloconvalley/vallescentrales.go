@@ -11,7 +11,7 @@
 
         <div class="form-group">
             <label class="form-label" for="fullName">Nombre Completo</label>
-            <input class="form-input" type="text" id="fullName" name="fullName"
+            <input class="form-input" type="text" id="fullName" name="full_name"
                    value="{{if .FormData}}{{.FormData.FullName}}{{end}}"
                    required autocomplete="name" placeholder="Tu nombre y apellido">
         </div>
@@ -28,7 +28,7 @@
             <div class="form-input-wrap">
                 <input class="form-input" type="password" id="password" name="password"
                        required autocomplete="new-password"
-                       placeholder="Mínimo 8 caracteres">
+                       placeholder="Mínimo 12 caracteres">
                 <span class="password-toggle" id="passwordToggle" role="button" tabindex="0" aria-label="Mostrar contraseña"></span>
             </div>
         </div>

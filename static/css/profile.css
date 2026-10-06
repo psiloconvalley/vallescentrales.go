@@ -759,3 +759,155 @@
     text-align: center;
     margin-top: 2px;
 }
+/* Public Profile Front Storefront */
+.seller-profile-card {
+    display: flex;
+    align-items: center;
+    gap: var(--s2);
+    text-align: left;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--s2);
+}
+
+.seller-avatar-container {
+    flex-shrink: 0;
+}
+
+.seller-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    border: 1px solid var(--border);
+}
+
+.seller-avatar-initial {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--obsidian);
+    color: #D8A25E;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.125rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+}
+
+.seller-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.seller-label {
+    display: block;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-light);
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+}
+
+.seller-name {
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.seller-name a {
+    color: var(--obsidian);
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+.seller-name a:hover {
+    color: var(--accent);
+}
+
+.seller-agency {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.seller-view-profile {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-top: 4px;
+    text-decoration: none;
+}
+
+.seller-view-profile:hover {
+    text-decoration: underline;
+}
+
+.divider {
+    height: 1px;
+    background: var(--border);
+    width: 100%;
+}
+
+/* Public profile page details */
+.profile-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s3);
+    text-align: center;
+    padding: var(--s4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+}
+
+.profile-header .profile-avatar {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background: var(--obsidian);
+    color: #D8A25E;
+    font-size: 2.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 3px solid var(--border);
+}
+
+.profile-header .profile-info h1 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--obsidian);
+    margin-bottom: var(--s1);
+}
+
+@media (min-width: 640px) {
+    .profile-header {
+        flex-direction: row;
+        text-align: left;
+        align-items: flex-start;
+        padding: var(--s5);
+    }
+    
+    .profile-header .profile-avatar {
+        width: 112px;
+        height: 112px;
+    }
+    
+    .profile-header .profile-info {
+        flex: 1;
+    }
+}
+
