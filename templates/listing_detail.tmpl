@@ -1,145 +1,227 @@
 {{define "content"}}
-<div class="container py-4">
-    <!-- Breadcrumbs -->
-    <nav class="breadcrumbs" aria-label="Breadcrumb">
-        <ol class="d-flex gap-1 flex-wrap">
-            <li><a href="/">Inicio</a></li>
-            <li class="separator">/</li>
-            <li><a href="/propiedades">Propiedades</a></li>
-            <li class="separator">/</li>
-            <li aria-current="page" class="active">{{.Listing.Title}}</li>
-        </ol>
-    </nav>
+<div class="container listing-detail-page">
+  <nav class="breadcrumb" aria-label="Navegación">
+    <a href="/">Inicio</a>
+    <span class="breadcrumb-separator">›</span>
+    <a href="/propiedades">Propiedades</a>
+    <span class="breadcrumb-separator">›</span>
+    <span aria-current="page">{{.Listing.Title}}</span>
+  </nav>
 
-    <main class="detail-grid mt-3">
-        <!-- Left Column: Content -->
-        <article class="listing-detail">
-            <!-- Gallery -->
-            <div class="listing-gallery">
-                {{if .Listing.Media}}
-                    {{range .Listing.Media}}
-                        <img src="{{.URL}}" alt="Foto de {{$.Listing.Title}}" class="listing-gallery-img" loading="lazy">
-                    {{end}}
-                {{else}}
-                    <div class="listing-gallery-empty">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                            <polyline points="21 15 16 10 5 21"></polyline>
-                        </svg>
-                        <span>Sin imágenes disponibles</span>
-                    </div>
-                {{endif}}
+  <div class="listing-detail-layout">
+    <!-- Main Content -->
+    <main class="listing-main">
+      <header class="listing-header">
+        <div class="listing-badges">
+          <span class="badge badge-operation badge-{{.Listing.OperationType}}">{{operationLabel .Listing.OperationType}}</span>
+          <span class="badge badge-property">{{propertyLabel .Listing.PropertyType}}</span>
+          {{if .Listing.IsFeatured}}
+            <span class="badge badge-featured">Destacada</span>
+          {{end}}
+        </div>
+        <h1 class="listing-title">{{.Listing.Title}}</h1>
+        <p class="listing-location">
+          <svg class="location-pin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+          {{.Listing.Municipality}}, Oaxaca
+        </p>
+      </header>
+
+      <!-- Image Gallery -->
+      {{if .Listing.Photos}}
+        <div class="gallery-container">
+          <div class="gallery-main">
+            <img id="main-gallery-image" src="{{index .Listing.Photos 0}}" alt="{{.Listing.Title}}" class="gallery-primary-img" loading="eager">
+          </div>
+          {{if gt (len .Listing.Photos) 1}}
+            <div class="gallery-thumbnails">
+              {{range $i, $photo := .Listing.Photos}}
+                <button type="button" class="thumbnail-btn {{if eq $i 0}}active{{end}}" data-src="{{$photo}}" aria-label="Ver foto {{$i}}">
+                  <img src="{{$photo}}" alt="Miniatura {{$i}}" loading="lazy">
+                </button>
+              {{end}}
             </div>
+          {{end}}
+        </div>
+      {{else}}
+        <div class="gallery-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+          <p>Sin fotografías disponibles</p>
+        </div>
+      {{end}}
 
-            <!-- Header -->
-            <header class="listing-header">
-                <div class="listing-header-top">
-                    <span class="badge badge-{{.Listing.Type}}">{{.Listing.GetFormattedType}}</span>
-                    <span class="status status-{{.Listing.Status}}">{{.Listing.GetFormattedStatus}}</span>
-                </div>
-                <h1>{{.Listing.Title}}</h1>
-                <div class="listing-location">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                        <circle cx="12" cy="10" r="3"></circle>
-                    </svg>
-                    <span>{{.Listing.Municipality}}, Oaxaca</span>
-                </div>
-            </header>
+      <!-- Price Card (Mobile only) -->
+      <div class="price-box-mobile">
+        <div class="price-tag">{{formatPrice .Listing.Price .Listing.Currency}}</div>
+        {{if and (eq .Listing.Currency "MXN") $.USDPrice}}
+          <div class="price-secondary">≈ {{formatPrice $.USDPrice "USD"}}</div>
+        {{end}}
+      </div>
 
-            <!-- Price & Key Details Box -->
-            <div class="listing-price-card">
-                <div class="listing-price-main">
-                    {{if eq .Listing.Currency "MXN"}}
-                        {{formatMXN .Listing.Price}} <span class="listing-price-currency">MXN</span>
-                        <div class="listing-price-usd">≈ {{formatUSD (convertToUSD .Listing.Price)}} USD</div>
-                    {{else}}
-                        {{formatUSD .Listing.Price}} <span class="listing-price-currency">USD</span>
-                    {{end}}
-                </div>
-                <div class="listing-price-note">Trato Directo • Sin intermediarios</div>
+      <!-- Description Section -->
+      <section class="detail-section">
+        <h2>Descripción de la Propiedad</h2>
+        <div class="listing-description">
+          <p>{{.Listing.Description}}</p>
+        </div>
+      </section>
+
+      <!-- Key Specifications Grid -->
+      <section class="detail-section">
+        <h2>Características Principales</h2>
+        <div class="specs-grid">
+          {{if .Listing.TotalArea}}
+            <div class="spec-card">
+              <span class="spec-label">Área del Terreno</span>
+              <span class="spec-val">{{formatNumber .Listing.TotalArea}} m²</span>
             </div>
-
-            <!-- Attributes Grid -->
-            <div class="listing-details-grid">
-                <div class="listing-detail-item">
-                    <div class="listing-detail-label">Área total</div>
-                    <div class="listing-detail-value">{{.Listing.AreaSqM}} m²</div>
-                </div>
-                <div class="listing-detail-item">
-                    <div class="listing-detail-label">Tenencia</div>
-                    <div class="listing-detail-value">{{.Listing.GetFormattedTenure}}</div>
-                </div>
+          {{end}}
+          {{if .Listing.BuiltArea}}
+            <div class="spec-card">
+              <span class="spec-label">Área Construida</span>
+              <span class="spec-val">{{formatNumber .Listing.BuiltArea}} m²</span>
             </div>
+          {{end}}
+          {{if .Listing.Bedrooms}}
+            <div class="spec-card">
+              <span class="spec-label">Recámaras</span>
+              <span class="spec-val">{{.Listing.Bedrooms}}</span>
+            </div>
+          {{end}}
+          {{if .Listing.Bathrooms}}
+            <div class="spec-card">
+              <span class="spec-label">Baños</span>
+              <span class="spec-val">{{.Listing.Bathrooms}}</span>
+            </div>
+          {{end}}
+          {{if .Listing.HalfBaths}}
+            <div class="spec-card">
+              <span class="spec-label">Medios Baños</span>
+              <span class="spec-val">{{.Listing.HalfBaths}}</span>
+            </div>
+          {{end}}
+          {{if .Listing.ParkingSpots}}
+            <div class="spec-card">
+              <span class="spec-label">Estacionamientos</span>
+              <span class="spec-val">{{.Listing.ParkingSpots}}</span>
+            </div>
+          {{end}}
+          <div class="spec-card">
+            <span class="spec-label">Régimen Legal</span>
+            <span class="spec-val">{{propertyRegimeLabel .Listing.PropertyType}}</span>
+          </div>
+        </div>
+      </section>
 
-            <!-- Description -->
-            {{if .Listing.Description}}
-            <section class="listing-description">
-                <h2>Descripción de la propiedad</h2>
-                <div class="listing-description-body">
-                    <p>{{.Listing.Description}}</p>
-                </div>
-            </section>
+      <!-- Amenities Section -->
+      {{if .Listing.Amenities}}
+        <section class="detail-section">
+          <h2>Amenidades y Servicios</h2>
+          <ul class="amenities-list">
+            {{range .Listing.Amenities}}
+              <li class="amenity-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16" class="check-icon" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>{{.}}</span>
+              </li>
             {{end}}
-        </article>
-
-        <!-- Right Column: Contact Card Widget (Securely Gated) -->
-        <aside class="listing-sidebar">
-            <div class="listing-contact">
-					  <!-- Seller mini storefront card -->
-                <div class="seller-profile-card mb-4">
-                    <div class="seller-avatar-container">
-                        {{if .Owner.AvatarURL}}
-                            <img src="{{.Owner.AvatarURL}}" alt="{{.Owner.DisplayNameOrFull}}" class="seller-avatar">
-                        {{else}}
-                            <span class="seller-avatar-initial">{{.Owner.InitialLetter}}</span>
-                        {{end}}
-                    </div>
-                    <div class="seller-details">
-                        <span class="seller-label">Vendedor Autorizado</span>
-                        <h3 class="seller-name">
-                            <a href="/usuarios/{{.Owner.ID}}">{{.Owner.DisplayNameOrFull}}</a>
-                        </h3>
-                        {{if .Owner.AgencyName}}
-                            <span class="seller-agency">🏢 {{.Owner.AgencyName}}</span>
-                        {{end}}
-                        <a href="/usuarios/{{.Owner.ID}}" class="seller-view-profile">Ver perfil completo →</a>
-                    </div>
-                </div>
-                                        <!-- Direct Email Connection -->
-                        <a href="mailto:{{.Owner.Email}}?subject=Interés en propiedad: {{.Listing.Title}}" class="btn btn-outline btn-block">
-                            ✉️ Contactar por Correo
-                        </a>
-
-                        <!-- Direct WhatsApp (Gated by Owner's Visibility preference & Value existence) -->
-                        {{if and .Owner.ShowWhatsApp .Owner.WhatsApp}}
-                            <a href="https://wa.me/{{.Owner.WhatsApp}}?text=Hola,%20me%20interesa%20la%20propiedad%20que%20publicaste:%20{{.Listing.Title}}" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp btn-block mt-2">
-                                📱 Contactar por WhatsApp
-                            </a>
-                        {{end}}
-
-                        <!-- Phone Call Connection (Gated by Owner's Visibility preference & Value existence) -->
-                        {{if and .Owner.ShowPhone .Owner.Phone}}
-                            <a href="tel:{{.Owner.Phone}}" class="btn btn-outline btn-block mt-2">
-                                📞 Llamar al Propietario
-                            </a>
-                        {{end}}
-                    </div>
-                {{else}}
-                    <h2>¿Te interesa esta propiedad?</h2>
-                    <p class="text-muted font-sm">Debes iniciar sesión para poder ver los datos de contacto del propietario.</p>
-                    <div class="contact-auth-gates mt-3">
-                        <a href="/login?redirect=/propiedades/{{.Listing.Slug}}" class="btn btn-primary btn-block">
-                            Iniciar Sesión
-                        </a>
-                        <a href="/registro" class="btn btn-outline btn-block mt-2">
-                            Crear una Cuenta
-                        </a>
-                    </div>
-                {{end}}
-            </div>
-        </aside>
+          </ul>
+        </section>
+      {{end}}
     </main>
+
+    <!-- Sticky Sidebar -->
+    <aside class="listing-sidebar">
+      <div class="sidebar-sticky-wrapper">
+        <!-- Price Display Card -->
+        <div class="sidebar-card price-sidebar-card">
+          <div class="price-header-label">Precio publicado</div>
+          <div class="price-primary">{{formatPrice .Listing.Price .Listing.Currency}}</div>
+          {{if and (eq .Listing.Currency "MXN") $.USDPrice}}
+            <div class="price-secondary-sub">≈ {{formatPrice $.USDPrice "USD"}}</div>
+          {{end}}
+        </div>
+
+        <!-- Seller Profile & Contact Section -->
+        <div class="sidebar-card seller-profile-card">
+          <div class="seller-profile-header">
+            {{if .Owner.AvatarURL}}
+              <img src="{{.Owner.AvatarURL}}" alt="{{.Owner.DisplayNameOrFull}}" class="seller-avatar">
+            {{else}}
+              <div class="seller-avatar seller-avatar-fallback">
+                {{slice .Owner.DisplayNameOrFull 0 1}}
+              </div>
+            {{end}}
+            <div class="seller-meta">
+              <h3 class="seller-name">
+                <a href="/usuarios/{{.Owner.ID}}">{{.Owner.DisplayNameOrFull}}</a>
+              </h3>
+              {{if .Owner.AgencyName}}
+                <span class="seller-agency">{{.Owner.AgencyName}}</span>
+              {{else}}
+                <span class="seller-role">Vendedor particular</span>
+              {{end}}
+            </div>
+          </div>
+
+          <div class="seller-actions">
+            <a href="/usuarios/{{.Owner.ID}}" class="btn btn-outline btn-block">
+              Ver perfil y más propiedades
+            </a>
+          </div>
+
+          <hr class="seller-card-divider">
+
+          <!-- Contact Options (Gated by Auth) -->
+          {{if .User}}
+            <div class="contact-methods">
+              <h4 class="contact-heading">Contacto directo</h4>
+              {{if and .Owner.ShowPhone .Owner.Phone}}
+                <a href="tel:{{.Owner.Phone}}" class="btn btn-secondary btn-block contact-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                  </svg>
+                  Llamar: {{.Owner.Phone}}
+                </a>
+              {{end}}
+
+              {{if and .Owner.ShowWhatsApp .Owner.WhatsApp}}
+                <a href="https://wa.me/{{.Owner.WhatsApp}}?text=Hola,%20me%20interesa%20la%20propiedad:%20{{.Listing.Title}}" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp btn-block contact-btn">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true">
+                    <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm5.79 14.07c-.24.68-1.4 1.29-1.92 1.37-.5.08-1.15.11-3.66-.92-3.21-1.33-5.27-4.57-5.43-4.78-.16-.21-1.3-1.73-1.3-3.3 0-1.57.82-2.34 1.11-2.66.29-.32.63-.4 0.84-.4.21 0 .42.01.6.01.19.01.44-.07.69.52.26.59.88 2.15.96 2.31.08.16.13.35.03.56-.11.21-.16.35-.32.53-.16.19-.34.42-.48.56-.16.16-.33.33-.14.65.19.32.84 1.38 1.8 2.24 1.24 1.1 2.28 1.45 2.6 1.61.32.16.51.14.7-.08.19-.22.82-.96 1.04-1.29.22-.33.45-.27.75-.16.3.11 1.91.9 2.24 1.06.33.16.55.24.63.38.08.14.08.82-.16 1.5z"></path>
+                  </svg>
+                  Contactar por WhatsApp
+                </a>
+              {{end}}
+
+              {{if not (or .Owner.ShowPhone .Owner.ShowWhatsApp)}}
+                <p class="contact-notice">El vendedor prefiere ser contactado por mensaje a través de la plataforma.</p>
+              {{end}}
+            </div>
+          {{else}}
+            <div class="auth-gate-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32" class="lock-icon" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <h4 class="auth-gate-title">Inicia sesión para contactar</h4>
+              <p class="auth-gate-text">Para proteger a propietarios y compradores contra spam, el contacto directo requiere una cuenta verificada.</p>
+              <a href="/login?redirect=/propiedades/{{.Listing.ID}}" class="btn btn-primary btn-block">
+                Iniciar Sesión
+              </a>
+              <a href="/registro" class="auth-gate-secondary-link">¿No tienes cuenta? Regístrate</a>
+            </div>
+          {{end}}
+        </div>
+      </div>
+    </aside>
+  </div>
 </div>
 {{end}}
