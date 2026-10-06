@@ -1,12 +1,55 @@
 {{define "content"}}
 <section class="hero">
     <div class="container">
-        <h1>Tierra y Casas en los Valles Centrales</h1>
-        <p>La plataforma premier de bienes raíces para la región más hermosa de Oaxaca</p>
+        <h1>Terrenos, Casas y Propiedades en los Valles Centrales</h1>
+        <p>La plataforma inmobiliaria transparente para comprar, vender y rentar en el corazón de Oaxaca. Trato directo, información clara y contacto seguro.</p>
         <a href="/propiedades" class="btn btn-primary btn-lg">Ver Propiedades →</a>
     </div>
 </section>
 
+<!-- Sección Cómo Funciona -->
+<section class="process-section">
+    <div class="container">
+        <h2 class="process-title">Cómo Funciona</h2>
+        <p class="process-subtitle">Diseñado para ser simple, transparente y seguro tanto para compradores como para propietarios en Oaxaca.</p>
+        
+        <div class="process-grid">
+            <div class="process-card">
+                <div class="process-icon-container">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" class="process-icon">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </div>
+                <h3>1. Explora con Certeza</h3>
+                <p>Encuentra terrenos residenciales o ejidales, casas y ranchos con ubicaciones claras, dimensiones precisas y precios reales en pesos (MXN) y dólares (USD).</p>
+            </div>
+            
+            <div class="process-card">
+                <div class="process-icon-container">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" class="process-icon">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                </div>
+                <h3>2. Acceso y Seguridad</h3>
+                <p>Crea tu cuenta segura en segundos. Protegemos la privacidad del propietario contra el spam y ofertas falsas al resguardar la información detrás de un inicio de sesión seguro.</p>
+            </div>
+            
+            <div class="process-card">
+                <div class="process-icon-container">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" class="process-icon">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                </div>
+                <h3>3. Conexión Directa</h3>
+                <p>Comunícate de manera segura con el dueño o asesor autorizado mediante WhatsApp o llamada. Coordina visitas directas sin comisiones ocultas.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Propiedades Destacadas -->
 <section class="container mt-4">
     {{if .Listings}}
     <h2 class="mb-3">Propiedades Destacadas</h2>
@@ -18,9 +61,22 @@
     {{else}}
     <div class="empty-state">
         <h2>Próximamente</h2>
-        <p>Las primeras propiedades de los Valles Centrales estarán aquí pronto.</p>
+        <p>Las primeras propiedades verificadas en los Valles Centrales de Oaxaca estarán disponibles aquí muy pronto.</p>
         <a href="/registro" class="btn btn-primary btn-lg mt-3">Publica Tu Propiedad →</a>
     </div>
     {{end}}
+</section>
+
+<!-- Banner de Propietario CTA -->
+<section class="owner-cta-section container">
+    <div class="owner-cta-card">
+        <div class="owner-cta-content">
+            <h3>¿Tienes una propiedad en venta o renta?</h3>
+            <p>Anuncia tu terreno, casa o local en minutos. Llega directamente a compradores calificados que buscan de manera genuina invertir en Oaxaca.</p>
+        </div>
+        <div class="owner-cta-action">
+            <a href="/publicar" class="btn btn-accent btn-lg">Publicar Propiedad →</a>
+        </div>
+    </div>
 </section>
 {{end}}
