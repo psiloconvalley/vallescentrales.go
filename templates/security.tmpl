@@ -1,32 +1,47 @@
 {{define "content"}}
 <div class="container py-4">
-    <header class="security-header">
-        <h1>Configuración de Cuenta</h1>
-        <p class="text-muted">Administra tu contraseña de acceso y llaves de seguridad físicas (Passkeys)</p>
-    </header>
+  <header class="security-header">
+    <h1>Configuración de Cuenta</h1>
+    <p class="text-muted">Administra tu contraseña de acceso y llaves de seguridad físicas (Passkeys)</p>
+  </header>
 
-    <div class="security-layout mt-4">
-        <!-- Settings Tabs -->
-        {{template "settings_tabs" .}}
+  <div class="security-layout mt-4">
+    <!-- Settings Tabs -->
+    {{template "settings_tabs" .}}
 
-        <div class="security-workspace card p-4 mt-3">
-            <h2 class="section-title">Cambiar Contraseña</h2>
-            <form method="POST" action="/cuenta/seguridad" class="mt-3" novalidate>
-                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-                
-                <div class="form-group">
-                    <label class="form-label" for="current_password">Contraseña Actual</label>
-                    <input class="form-input" type="password" id="current_password" name="current_password" required>
-                </div>
+    <div class="security-workspace card p-4 mt-3">
+      <!-- Status Alerts -->
+      {{if .Error}}
+        <div class="flash flash-error">{{.Error}}</div>
+      {{end}}
+      {{if .Success}}
+        <div class="flash flash-success">{{.Success}}</div>
+      {{end}}
 
-                <div class="form-group mt-3">
-                    <label class="form-label" for="new_password">Nueva Contraseña</label>
-                    <input class="form-input" type="password" id="new_password" name="new_password" required>
-                </div>
+      <section class="settings-section">
+        <h2 class="section-title">Cambiar Contraseña</h2>
+        <p class="section-subtitle text-muted">Mantén tu cuenta segura actualizando tu contraseña regularmente.</p>
 
-                <button type="submit" class="btn btn-primary btn-sm mt-3">Actualizar Contraseña</button>
-            </form>
-        </div>
+        <form method="POST" action="/cuenta/seguridad" class="mt-3" novalidate>
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+          
+          <div class="form-group">
+            <label class="form-label" for="current_password">Contraseña Actual</label>
+            <input class="form-input" type="password" id="current_password" name="current_password" required autocomplete="current-password">
+          </div>
+
+          <div class="form-group mt-3">
+            <label class="form-label" for="new_password">Nueva Contraseña</label>
+            <input class="form-input" type="password" id="new_password" name="new_password" required autocomplete="new-password">
+            <span class="form-help">La contraseña nueva debe tener al menos 12 caracteres.</span>
+          </div>
+
+          <div class="form-actions mt-4">
+            <button type="submit" class="btn btn-primary">Actualizar Contraseña</button>
+          </div>
+        </form>
+      </section>
     </div>
+  </div>
 </div>
 {{end}}

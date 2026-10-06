@@ -135,11 +135,11 @@ func (h *UploadHandler) HandleUploadListingPhotos(w http.ResponseWriter, r *http
 		"owner_id", user.ID,
 	)
 
-	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+	http.Redirect(w, r, "/cuenta", http.StatusSeeOther)
 }
 
 // HandleUploadAvatar handles profile avatar upload.
-// POST /dashboard/avatar
+// POST /api/upload/avatar
 func (h *UploadHandler) HandleUploadAvatar(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
@@ -193,5 +193,5 @@ func (h *UploadHandler) HandleUploadAvatar(w http.ResponseWriter, r *http.Reques
 
 	slog.Info("avatar uploaded", "user_id", user.ID, "url", result.PublicURL)
 
-	http.Redirect(w, r, "/dashboard/profile", http.StatusSeeOther)
+	http.Redirect(w, r, "/cuenta/perfil", http.StatusSeeOther)
 }
