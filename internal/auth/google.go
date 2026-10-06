@@ -1,5 +1,4 @@
 // internal/auth/google.go
-// Google OAuth 2.0 flow — redirect, callback, user info.
 
 package auth
 
@@ -26,7 +25,6 @@ const (
 	tokenExchangeTimeout = 10 * time.Second
 )
 
-// GoogleUser holds the profile data returned by Google.
 type GoogleUser struct {
 	ID            string `json:"id"`
 	Email         string `json:"email"`
@@ -35,15 +33,12 @@ type GoogleUser struct {
 	Picture       string `json:"picture"`
 }
 
-// GoogleOAuth manages the Google OAuth 2.0 flow.
 type GoogleOAuth struct {
 	config *oauth2.Config
 	secure bool
 	domain string
 }
 
-// NewGoogleOAuth creates a GoogleOAuth handler.
-// Returns nil if clientID is empty — Google OAuth is optional.
 func NewGoogleOAuth(clientID, clientSecret, redirectURL string, secure bool, baseDomain string) *GoogleOAuth {
 	if clientID == "" {
 		slog.Info("google oauth not configured — feature disabled")
@@ -51,7 +46,7 @@ func NewGoogleOAuth(clientID, clientSecret, redirectURL string, secure bool, bas
 	}
 
 	cookieDomain := ""
-	if secure && baseDomain != "" && baseDomain != "localhost" && baseDomain != "127.0.0.1" {
+	if baseDomain != "" && baseDomain != "localhost" && baseDomain != "127.0.0.1" {
 		if idx := strings.Index(baseDomain, ":"); idx != -1 {
 			baseDomain = baseDomain[:idx]
 		}
@@ -78,13 +73,10 @@ func NewGoogleOAuth(clientID, clientSecret, redirectURL string, secure bool, bas
 	}
 }
 
-// Enabled returns true if Google OAuth is configured.
 func (g *GoogleOAuth) Enabled() bool {
 	return g != nil && g.config != nil
 }
 
-// RedirectToGoogle generates a state token, sets the CSRF cookie,
-// and redirects the user to Google's consent screen.
 func (g *GoogleOAuth) RedirectToGoogle(w http.ResponseWriter, r *http.Request) {
 	state, err := generateStateToken()
 	if err != nil {
@@ -99,8 +91,6 @@ func (g *GoogleOAuth) RedirectToGoogle(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-// ProcessCallback validates the state, exchanges the code for a token,
-// and fetches the Google user profile.
 func (g *GoogleOAuth) ProcessCallback(w http.ResponseWriter, r *http.Request) (*GoogleUser, error) {
 	state := r.URL.Query().Get("state")
 	if !g.verifyStateCookie(r, state) {
@@ -132,7 +122,6 @@ func (g *GoogleOAuth) ProcessCallback(w http.ResponseWriter, r *http.Request) (*
 	return g.fetchUser(ctx, token)
 }
 
-// fetchUser retrieves the Google user's profile information.
 func (g *GoogleOAuth) fetchUser(ctx context.Context, token *oauth2.Token) (*GoogleUser, error) {
 	client := g.config.Client(ctx, token)
 
@@ -162,7 +151,6 @@ func (g *GoogleOAuth) fetchUser(ctx context.Context, token *oauth2.Token) (*Goog
 	return &gu, nil
 }
 
-// setStateCookie writes the CSRF state cookie.
 func (g *GoogleOAuth) setStateCookie(w http.ResponseWriter, state string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     oauthStateCookie,
@@ -176,7 +164,6 @@ func (g *GoogleOAuth) setStateCookie(w http.ResponseWriter, state string) {
 	})
 }
 
-// verifyStateCookie checks the state parameter matches the cookie.
 func (g *GoogleOAuth) verifyStateCookie(r *http.Request, state string) bool {
 	cookie, err := r.Cookie(oauthStateCookie)
 	if err != nil {
@@ -185,25 +172,13 @@ func (g *GoogleOAuth) verifyStateCookie(r *http.Request, state string) bool {
 	}
 
 	if cookie.Value != state || state == "" {
-		expectedPrefix := cookie.Value
-		if len(expectedPrefix) > 8 {
-			expectedPrefix = expectedPrefix[:8]
-		}
-		gotPrefix := state
-		if len(gotPrefix) > 8 {
-			gotPrefix = gotPrefix[:8]
-		}
-		slog.Warn("oauth state mismatch",
-			"expected_prefix", expectedPrefix,
-			"got_prefix", gotPrefix,
-		)
+		slog.Warn("oauth state mismatch")
 		return false
 	}
 
 	return true
 }
 
-// clearStateCookie removes the state cookie after use.
 func (g *GoogleOAuth) clearStateCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     oauthStateCookie,
@@ -217,7 +192,6 @@ func (g *GoogleOAuth) clearStateCookie(w http.ResponseWriter) {
 	})
 }
 
-// generateStateToken creates a cryptographically secure random string.
 func generateStateToken() (string, error) {
 	b := make([]byte, stateTokenBytes)
 	if _, err := rand.Read(b); err != nil {
