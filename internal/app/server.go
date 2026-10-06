@@ -1,3 +1,6 @@
+// internal/app/server.go
+// HTTP server lifecycle, middleware stack, subdomain routing, and route registration.
+
 package app
 
 import (
@@ -19,10 +22,11 @@ import (
 	"vallescentrales/internal/middleware"
 )
 
-// Server coordinates the HTTP router, middleware, and lifecycle.
+// Server holds dependencies for the HTTP application.
 type Server struct {
 	cfg      *Config
 	db       *pgxpool.Pool
+	router   *chi.Mux
 	authMW   *middleware.AuthMiddleware
 	authH    *handlers.AuthHandler
 	listingH *handlers.ListingHandler
@@ -30,10 +34,9 @@ type Server struct {
 	passkeyH *handlers.PasskeyHandler
 	uploadH  *handlers.UploadHandler
 	tmpl     *TemplateRenderer
-	router   *chi.Mux
 }
 
-// NewServer initializes the application server and routes.
+// NewServer initializes all middleware and routing layers.
 func NewServer(
 	cfg *Config,
 	db *pgxpool.Pool,
@@ -48,6 +51,7 @@ func NewServer(
 	s := &Server{
 		cfg:      cfg,
 		db:       db,
+		router:   chi.NewRouter(),
 		authMW:   authMW,
 		authH:    authH,
 		listingH: listingH,
@@ -55,7 +59,6 @@ func NewServer(
 		passkeyH: passkeyH,
 		uploadH:  uploadH,
 		tmpl:     tmpl,
-		router:   chi.NewRouter(),
 	}
 
 	s.setupMiddleware()
@@ -64,7 +67,7 @@ func NewServer(
 	return s, nil
 }
 
-// setupMiddleware attaches global middleware to Chi.
+// setupMiddleware initializes the global HTTP middleware stack.
 func (s *Server) setupMiddleware() {
 	s.router.Use(chimiddleware.RequestID)
 	s.router.Use(chimiddleware.RealIP)
@@ -83,17 +86,48 @@ func (s *Server) setupRoutes() {
 	s.router.HandleFunc("/*", func(w http.ResponseWriter, r *http.Request) {
 		subdomain := extractSubdomain(r.Host, s.cfg.BaseDomain)
 
+		// Determine scheme dynamically
+		scheme := "http"
+		if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+			scheme = "https"
+		}
+
 		switch subdomain {
 		case "":
-			// Apex Domain (vallescentrales.com / localhost:8080) -> Gateway Hub
+			// Apex Domain (vallescentrales.com / localhost)
+			if r.URL.Path != "/" {
+				// Redirect all non-root paths on apex domain to the realty portal subdomain
+				host := "bienesraices." + s.cfg.BaseDomain
+				if s.cfg.BaseDomain == "localhost" || s.cfg.BaseDomain == "127.0.0.1" {
+					if idx := strings.Index(r.Host, ":"); idx != -1 {
+						host = "bienesraices.localhost" + r.Host[idx:]
+					} else {
+						host = "bienesraices.localhost:8080"
+					}
+				}
+				target := scheme + "://" + host + r.URL.Path
+				if r.URL.RawQuery != "" {
+					target += "?" + r.URL.RawQuery
+				}
+				http.Redirect(w, r, target, http.StatusMovedPermanently)
+				return
+			}
+			// Gateway Hub homepage
 			s.hubHandler().ServeHTTP(w, r)
+
 		case "bienesraices":
 			// Real Estate Subdomain
 			s.realtyRouter().ServeHTTP(w, r)
+
 		default:
-			// Redirect www.vallescentrales.com to vallescentrales.com
+			// Handle www subdomain
 			if subdomain == "www" {
-				target := "https://" + s.cfg.BaseDomain + r.URL.Path
+				host := s.cfg.BaseDomain
+				if r.URL.Path != "/" {
+					// Redirect non-root www requests to realty subdomain
+					host = "bienesraices." + s.cfg.BaseDomain
+				}
+				target := scheme + "://" + host + r.URL.Path
 				if r.URL.RawQuery != "" {
 					target += "?" + r.URL.RawQuery
 				}
@@ -133,17 +167,19 @@ func (s *Server) realtyRouter() http.Handler {
 	csrfMiddleware := middleware.CSRFProtect(s.cfg.IsProduction())
 	r.Use(csrfMiddleware)
 
-	// Public real estate routes
+	// Public real estate browsing
 	r.Get("/", s.listingH.HandleHome)
 	r.Get("/propiedades", s.listingH.HandleListListings)
 	r.Get("/propiedades/{slug}", s.listingH.HandleGetListing)
-
-	// Authentication routes
+	
+	// Authentication
 	r.Get("/registro", s.authH.HandleRegisterPage)
 	r.Post("/registro", s.authH.HandleRegister)
 	r.Get("/login", s.authH.HandleLoginPage)
 	r.Post("/login", s.authH.HandleLogin)
 	r.Post("/logout", s.authH.HandleLogout)
+
+	// Google OAuth 2.0
 	r.Get("/auth/google", s.authH.HandleGoogleLogin)
 	r.Get("/auth/google/callback", s.authH.HandleGoogleCallback)
 
@@ -153,7 +189,7 @@ func (s *Server) realtyRouter() http.Handler {
 	r.Post("/webauthn/login/begin", s.passkeyH.HandleLoginBegin)
 	r.Post("/webauthn/login/finish", s.passkeyH.HandleLoginFinish)
 
-	// Public user profile
+	// Public user profile storefront
 	r.Get("/usuarios/{id}", s.profileH.HandlePublicProfile)
 
 	// Authenticated route group
@@ -184,7 +220,7 @@ func (s *Server) realtyRouter() http.Handler {
 	return r
 }
 
-// securityHeaders sets modern security standards following our strict CSP / Zero-Inline rules.
+// securityHeaders sets modern security standards following strict CSP / Zero-Inline rules.
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Frame-Options", "DENY")
@@ -229,27 +265,36 @@ func (s *Server) Start() error {
 		Addr:         addr,
 		Handler:      s.router,
 		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
-	shutdownErr := make(chan error, 1)
+	shutdownComplete := make(chan struct{})
+
 	go func() {
 		quit := make(chan os.Signal, 1)
 		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-		sig := <-quit
+		<-quit
 
-		slog.Info("shutting down server", "signal", sig.String())
+		slog.Info("shutting down server...")
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		shutdownErr <- httpServer.Shutdown(ctx)
+		if err := httpServer.Shutdown(ctx); err != nil {
+			slog.Error("server forced to shutdown", "error", err)
+		}
+
+		close(shutdownComplete)
 	}()
 
-	slog.Info("starting server", "addr", addr, "domain", s.cfg.BaseDomain)
+	slog.Info("server listening", "addr", addr, "env", s.cfg.AppEnv)
+
 	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		return err
+		return fmt.Errorf("server listen error: %w", err)
 	}
 
-	return <-shutdownErr
+	<-shutdownComplete
+	slog.Info("server stopped gracefully")
+	return nil
 }
