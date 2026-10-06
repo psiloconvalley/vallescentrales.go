@@ -157,11 +157,13 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	slog.Info("user registered", "user_id", user.ID, "email", user.Email, "provider", "email")
 	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }
-
-// HandleLoginPage serves the login form.
+// HandleLoginPage serves the email/password login page.
 func (h *AuthHandler) HandleLoginPage(w http.ResponseWriter, r *http.Request) {
+	redirect := r.URL.Query().Get("redirect")
+
 	h.renderPage(w, r, "login.tmpl", map[string]any{
-		"Meta": map[string]string{"Title": "Ingresar"},
+		"Meta":     map[string]string{"Title": "Ingresar"},
+		"Redirect": redirect,
 	})
 }
 
@@ -175,8 +177,9 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	email    := strings.TrimSpace(strings.ToLower(r.FormValue("email")))
+	email := strings.TrimSpace(strings.ToLower(r.FormValue("email")))
 	password := r.FormValue("password")
+	redirect := strings.TrimSpace(r.FormValue("redirect"))
 
 	formData := map[string]string{"Email": email}
 
@@ -184,6 +187,7 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		h.renderPage(w, r, "login.tmpl", map[string]any{
 			"Error":    "Correo y contraseña son obligatorios",
 			"FormData": formData,
+			"Redirect": redirect,
 			"Meta":     map[string]string{"Title": "Ingresar"},
 		})
 		return
@@ -195,14 +199,16 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 			h.renderPage(w, r, "login.tmpl", map[string]any{
 				"Error":    "Correo o contraseña incorrectos",
 				"FormData": formData,
+				"Redirect": redirect,
 				"Meta":     map[string]string{"Title": "Ingresar"},
 			})
 			return
 		}
 		slog.Error("failed to fetch user during login", "email", email, "error", err)
 		h.renderPage(w, r, "login.tmpl", map[string]any{
-			"Error": "Error al iniciar sesión",
-			"Meta":  map[string]string{"Title": "Ingresar"},
+			"Error":    "Error al iniciar sesión",
+			"Redirect": redirect,
+			"Meta":     map[string]string{"Title": "Ingresar"},
 		})
 		return
 	}
@@ -212,6 +218,7 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		h.renderPage(w, r, "login.tmpl", map[string]any{
 			"Error":    "Correo o contraseña incorrectos",
 			"FormData": formData,
+			"Redirect": redirect,
 			"Meta":     map[string]string{"Title": "Ingresar"},
 		})
 		return
@@ -222,6 +229,7 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		h.renderPage(w, r, "login.tmpl", map[string]any{
 			"Error":    "Correo o contraseña incorrectos",
 			"FormData": formData,
+			"Redirect": redirect,
 			"Meta":     map[string]string{"Title": "Ingresar"},
 		})
 		return
@@ -233,15 +241,33 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 			"user_id", user.ID, "error", err,
 		)
 		h.renderPage(w, r, "login.tmpl", map[string]any{
-			"Error": "Error al iniciar sesión",
-			"Meta":  map[string]string{"Title": "Ingresar"},
+			"Error":    "Error al iniciar sesión",
+			"Redirect": redirect,
+			"Meta":     map[string]string{"Title": "Ingresar"},
 		})
 		return
 	}
 
 	slog.Info("user logged in", "user_id", user.ID, "email", user.Email, "provider", "email")
-	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+
+	// Redirect to target path if safe, otherwise default to user dashboard
+	target := "/cuenta" // Matches your auth router dashboard endpoint
+	if isSafeRedirect(redirect) {
+		target = redirect
+	}
+
+	http.Redirect(w, r, target, http.StatusSeeOther)
 }
+
+// isSafeRedirect checks if the redirect target is local to prevent open-redirect attacks.
+func isSafeRedirect(url string) bool {
+	if url == "" {
+		return false
+	}
+	// Must start with '/' and not '//' (which browser parses as protocol-relative schemas)
+	return strings.HasPrefix(url, "/") && !strings.HasPrefix(url, "//")
+}
+
 
 // HandleLogout destroys the session and clears the cookie.
 func (h *AuthHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {

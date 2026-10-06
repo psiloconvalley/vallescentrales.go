@@ -1,74 +1,40 @@
 {{define "content"}}
-<div class="container">
+<div class="container py-4">
+    <header class="dashboard-header d-flex justify-between align-center">
+        <div>
+            <h1>Mi Panel de Control</h1>
+            <p class="text-muted">Administra tus publicaciones y datos de contacto en Valles Centrales</p>
+        </div>
+        <a href="/cuenta/perfil" class="btn btn-secondary btn-sm">Editar Perfil</a>
+    </header>
 
-    <div class="profile-header">
-        <div class="profile-avatar-initial">
-            {{if .User}}{{.User.InitialLetter}}{{end}}
+    <div class="dashboard-content mt-4">
+        <div class="dashboard-actions mb-3">
+            <a href="/publicar" class="btn btn-primary">+ Publicar Propiedad</a>
         </div>
 
-        <div class="profile-info">
-            <h1>{{if .User}}{{.User.DisplayNameOrFull}}{{end}}</h1>
-            <p class="text-muted">{{if .User}}{{.User.Email}}{{end}}</p>
-            {{if .User}}
-                {{if .User.IsGoogleUser}}
-                <span class="auth-badge auth-badge-google">Google</span>
-                {{else}}
-                <span class="auth-badge auth-badge-email">Email</span>
-                {{end}}
+        {{if .Listings}}
+        <div class="dashboard-list card">
+            {{range .Listings}}
+            <div class="dashboard-item d-flex justify-between align-center p-3">
+                <div class="item-meta">
+                    <h3>{{.Title}}</h3>
+                    <p class="font-sm text-muted">📍 {{.Municipality}} • Estado: <strong>{{.Status}}</strong> • 👁️ {{.ViewCount}} vistas</p>
+                </div>
+                <div class="item-actions d-flex gap-2">
+                    <a href="/propiedades/{{.Slug}}/editar" class="btn btn-outline btn-sm">Editar</a>
+                    <a href="/propiedades/{{.Slug}}" class="btn btn-secondary btn-sm" target="_blank">Ver</a>
+                </div>
+            </div>
             {{end}}
         </div>
-
-        <a href="/dashboard/profile" class="btn btn-secondary btn-sm">Editar Perfil</a>
+        {{else}}
+        <div class="empty-state card p-5 text-center">
+            <h2>Aún no tienes propiedades publicadas</h2>
+            <p class="text-muted">Comienza publicando tu primer terreno, casa o local comercial hoy mismo.</p>
+            <a href="/publicar" class="btn btn-primary mt-3">Publicar Ahora →</a>
+        </div>
+        {{end}}
     </div>
-
-    <div class="dashboard-header">
-        <div>
-            <h2>Mis Propiedades</h2>
-            <p class="text-muted text-sm">{{len .Listings}} propiedad{{if ne (len .Listings) 1}}es{{end}} registrada{{if ne (len .Listings) 1}}s{{end}}</p>
-        </div>
-        <a href="/listings/new" class="btn btn-primary">+ Publicar Propiedad</a>
-    </div>
-
-    {{if .Listings}}
-        <div class="dashboard-table-wrap">
-            <table class="dashboard-table">
-                <thead>
-                    <tr>
-                        <th>Propiedad</th>
-                        <th>Tipo</th>
-                        <th>Precio</th>
-                        <th>Estado</th>
-                        <th class="text-right">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{range .Listings}}
-                    <tr>
-                        <td>
-                            <div class="td-title">{{.Title}}</div>
-                            <div class="text-xs text-light mt-1">{{.Municipality}}</div>
-                        </td>
-                        <td><span class="badge badge-{{.PropertyType}}">{{.PropertyType}}</span></td>
-                        <td class="font-mono text-sm">${{printf "%.0f" .PriceMXN}} MXN</td>
-                        <td><span class="status status-{{.Status}}">{{.Status}}</span></td>
-                        <td class="text-right">
-                            <div class="td-actions">
-                                <a href="/listings/{{.Slug}}/edit" class="btn btn-secondary btn-sm">Editar</a>
-                                <a href="/listings/{{.Slug}}" class="btn btn-secondary btn-sm" target="_blank">Ver</a>
-                            </div>
-                        </td>
-                    </tr>
-                    {{end}}
-                </tbody>
-            </table>
-        </div>
-    {{else}}
-        <div class="empty-state">
-            <h2>Aún no tienes propiedades</h2>
-            <p>Comienza publicando tu primer terreno o casa en los Valles Centrales.</p>
-            <a href="/listings/new" class="btn btn-primary mt-3">Publicar Ahora →</a>
-        </div>
-    {{end}}
-
 </div>
 {{end}}

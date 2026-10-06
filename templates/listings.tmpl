@@ -1,24 +1,22 @@
 {{define "content"}}
-<div class="container">
-
-    <div class="page-header">
-        <h1>Propiedades</h1>
-        <p class="text-muted">Encuentra tu próxima propiedad en Oaxaca</p>
-    </div>
+<div class="container py-4">
+    <header class="catalog-header">
+        <h1>Propiedades en Valles Centrales</h1>
+        <p class="text-muted">Explora terrenos, casas, locales y ranchos disponibles en la región</p>
+    </header>
 
     {{if .Listings}}
-    <div class="listing-grid">
+    <div class="listing-grid mt-4">
         {{range .Listings}}
             {{template "listing_card" .}}
         {{end}}
     </div>
     {{else}}
-    <div class="empty-state">
-        <h2>No hay propiedades disponibles</h2>
-        <p>Sé el primero en publicar una propiedad en los Valles Centrales.</p>
-        <a href="/listings/new" class="btn btn-primary mt-3">Publicar Propiedad →</a>
+    <div class="empty-state mt-5">
+        <h2>No se encontraron propiedades</h2>
+        <p>Intenta ajustar tus filtros de búsqueda o publica tu propia propiedad.</p>
+        <a href="/publicar" class="btn btn-primary mt-3">Publicar Propiedad →</a>
     </div>
     {{end}}
-
 </div>
 {{end}}

@@ -6,8 +6,11 @@
     <div class="flash flash-error">{{.Error}}</div>
     {{end}}
 
-    <form method="POST" action="/auth/login" autocomplete="on" novalidate>
+    <form method="POST" action="/login" autocomplete="on" novalidate>
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        {{if .Redirect}}
+        <input type="hidden" name="redirect" value="{{.Redirect}}">
+        {{end}}
 
         <div class="form-group">
             <label class="form-label" for="email">Correo Electrónico</label>
@@ -30,7 +33,7 @@
     </form>
 
     <div class="auth-footer">
-        ¿No tienes cuenta? <a href="/auth/register">Crear cuenta</a>
+        ¿No tienes cuenta? <a href="/registro">Crear cuenta</a>
     </div>
 
     <div class="auth-divider">o</div>
