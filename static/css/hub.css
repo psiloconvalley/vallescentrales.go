@@ -1,4 +1,4 @@
-i/* ==========================================================================
+/* ==========================================================================
    GATEWAY HUB (vallescentrales.com)
    Isolated styles complying with strict Content Security Policy
    ========================================================================== */
@@ -39,7 +39,7 @@ body {
     font-size: 3rem;
     font-weight: 800;
     letter-spacing: -0.03em;
-    color: var(--obsidian, #1A2421);
+    color: #1A2421;
     margin-bottom: 0.5rem;
     line-height: 1.15;
 }
@@ -185,12 +185,13 @@ body {
     border: 1px solid #E5E7EB;
     cursor: not-allowed;
 }
+
 /* Standardized Footer Layout */
 .site-footer {
     background-color: var(--obsidian, #1A2421);
     color: rgba(255, 255, 255, 0.4);
     font-size: 0.8125rem;
-    padding: 1.25rem 1rem; /* Sleek mobile padding */
+    padding: 1.25rem 1rem;
     border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -198,9 +199,9 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     display: flex;
-    flex-direction: column; /* Centered, stacked rhythm on mobile */
+    flex-direction: column;
     align-items: center;
-    gap: 0.5rem; /* Snappy vertical flow */
+    gap: 0.5rem;
 }
 
 .footer-group {
@@ -222,7 +223,7 @@ body {
 }
 
 .svg-go {
-    width: 32px;
+    width: 36px;
     height: auto;
 }
 
@@ -249,8 +250,25 @@ body {
     stroke-linejoin: round;
 }
 
+/* ==========================================================================
+   RESPONSIVE LAYOUT BREAKPOINTS
+   ========================================================================== */
+
 @media (max-width: 768px) {
-    /* Clear out the redundant margins and gaps inside the media query block */
+    /* Ensure cards stack cleanly on screens smaller than 768px */
+    .hub-section {
+        padding: 2.5rem 1rem;
+    }
+    
+    .hub-grid {
+        grid-template-columns: 1fr; /* Force 1-column layout */
+        gap: 1.5rem;
+    }
+    
+    .hub-card {
+        padding: 2rem;
+    }
+
     .footer-inner {
         flex-direction: column;
         align-items: center;
@@ -258,12 +276,12 @@ body {
     }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 769px) {
     .site-footer {
         padding: 1.75rem 2rem;
     }
     .footer-inner {
-        flex-direction: row; /* Smooth row transformation for larger displays */
+        flex-direction: row;
         justify-content: space-between;
         gap: 0;
     }
