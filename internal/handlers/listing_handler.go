@@ -208,7 +208,7 @@ func (h *ListingHandler) renderListingForm(w http.ResponseWriter, r *http.Reques
 func (h *ListingHandler) HandleCreateListing(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
@@ -314,7 +314,7 @@ func (h *ListingHandler) HandleCreateListing(w http.ResponseWriter, r *http.Requ
 func (h *ListingHandler) HandleEditListingPage(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
@@ -344,7 +344,7 @@ func (h *ListingHandler) HandleEditListingPage(w http.ResponseWriter, r *http.Re
 func (h *ListingHandler) HandleEditListing(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
@@ -367,7 +367,7 @@ func (h *ListingHandler) HandleEditListing(w http.ResponseWriter, r *http.Reques
 func (h *ListingHandler) HandlePublishListing(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
@@ -400,7 +400,7 @@ func (h *ListingHandler) HandlePublishListing(w http.ResponseWriter, r *http.Req
 func (h *ListingHandler) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
