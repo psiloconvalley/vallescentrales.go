@@ -50,13 +50,71 @@ func NewTemplateRenderer(currency *services.CurrencyService) (*TemplateRenderer,
 	pages = append(pages, authPages...)
 
 	funcs := template.FuncMap{
-		"formatMXN": services.FormatMXN,
-		"formatUSD": services.FormatUSD,
+		"formatMXN":    services.FormatMXN,
+		"formatUSD":    services.FormatUSD,
 		"convertToUSD": func(mxn float64) float64 {
 			if currency == nil {
 				return 0
 			}
 			return currency.ConvertMXNToUSD(mxn)
+		},
+		"formatPrice": func(amount float64, curr string) string {
+			if curr == "USD" {
+				return services.FormatUSD(amount)
+			}
+			return services.FormatMXN(amount)
+		},
+		"formatNumber": func(v any) string {
+			switch n := v.(type) {
+			case float64:
+				return fmt.Sprintf("%.2f", n)
+			case float32:
+				return fmt.Sprintf("%.2f", n)
+			case int, int64, int32:
+				return fmt.Sprintf("%d", n)
+			default:
+				return fmt.Sprintf("%v", v)
+			}
+		},
+		"operationLabel": func(op string) string {
+			switch op {
+			case "sale":
+				return "Venta"
+			case "rent":
+				return "Renta"
+			case "temporary_rental":
+				return "Renta Temporal"
+			default:
+				return op
+			}
+		},
+		"propertyLabel": func(pt string) string {
+			switch pt {
+			case "land":
+				return "Terreno"
+			case "house":
+				return "Casa"
+			case "apartment":
+				return "Departamento"
+			case "commercial":
+				return "Local Comercial"
+			case "office":
+				return "Oficina"
+			default:
+				return pt
+			}
+		},
+		"propertyRegimeLabel": func(r string) string {
+			switch r {
+			case "escritura_publica":
+				return "Escritura Pública"
+			case "comunal":
+				return "Comunal"
+			case "ejidal":
+				return "Ejidal"
+			default:
+				return r
+			}
 		},
 	}
 
@@ -83,7 +141,7 @@ func NewTemplateRenderer(currency *services.CurrencyService) (*TemplateRenderer,
 
 	slog.Info("templates loaded",
 		"count", len(templates),
-		"asset_version", version,
+		"version", version,
 	)
 
 	return &TemplateRenderer{
