@@ -39,7 +39,8 @@ func main() {
 	passkeyRepo := repo.NewPasskeyRepo(db)
 
 	// Auth
-	sessionMgr := auth.NewSessionManager(sessionRepo, cfg.IsProduction())
+	sessionMgr := auth.NewSessionManager(sessionRepo, cfg.IsProduction(), cfg.BaseDomain)
+
 
 	googleAuth := auth.NewGoogleOAuth(
 		cfg.GoogleClientID,

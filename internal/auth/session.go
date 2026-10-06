@@ -1,7 +1,7 @@
 // internal/auth/session.go
 // Session lifecycle: create, load, destroy.
 // ADR-003: server-side sessions backed by PostgreSQL.
-// Security: httpOnly, SameSite=Lax, Secure in production.
+// Security: httpOnly, SameSite=Lax, Secure in production, shared across subdomains.
 
 package auth
 
@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -35,15 +36,32 @@ var ErrNoSession = errors.New("no session")
 // SessionManager handles session creation, loading, and destruction.
 type SessionManager struct {
 	sessions *repo.SessionRepo
-	secure   bool // true in production — enforces HTTPS-only cookie
+	secure   bool   // true in production — enforces HTTPS-only cookie
+	domain   string // e.g. ".vallescentrales.com" for multi-subdomain sharing
 }
 
 // NewSessionManager creates a SessionManager.
 // secure must be true in production, false in local development.
-func NewSessionManager(sessions *repo.SessionRepo, secure bool) *SessionManager {
+// baseDomain determines the cookie scope across subdomains.
+func NewSessionManager(sessions *repo.SessionRepo, secure bool, baseDomain string) *SessionManager {
+	cookieDomain := ""
+	if secure && baseDomain != "" && baseDomain != "localhost" && baseDomain != "127.0.0.1" {
+		// Strip port if present
+		if idx := strings.Index(baseDomain, ":"); idx != -1 {
+			baseDomain = baseDomain[:idx]
+		}
+		// Prefix with leading dot to share across apex and subdomains
+		if !strings.HasPrefix(baseDomain, ".") {
+			cookieDomain = "." + baseDomain
+		} else {
+			cookieDomain = baseDomain
+		}
+	}
+
 	return &SessionManager{
 		sessions: sessions,
 		secure:   secure,
+		domain:   cookieDomain,
 	}
 }
 
@@ -134,6 +152,7 @@ func (sm *SessionManager) Destroy(ctx context.Context, w http.ResponseWriter, r 
 		Name:     SessionCookieName,
 		Value:    "",
 		Path:     "/",
+		Domain:   sm.domain,
 		MaxAge:   -1,
 		HttpOnly: true,
 		Secure:   sm.secure,
@@ -146,14 +165,16 @@ func (sm *SessionManager) Destroy(ctx context.Context, w http.ResponseWriter, r 
 }
 
 // setCookie writes the session cookie to the HTTP response.
-// httpOnly:  JS cannot read it — XSS cannot steal sessions
-// Secure:    HTTPS only in production
-// SameSite:  Lax — CSRF protection via nosurf tokens
+// httpOnly: JS cannot read it — XSS cannot steal sessions
+// Secure: HTTPS only in production
+// SameSite: Lax — standard CSRF protection
+// Domain: Scoped to .vallescentrales.com in production so subdomains share login
 func (sm *SessionManager) setCookie(w http.ResponseWriter, sessionID string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    sessionID,
 		Path:     "/",
+		Domain:   sm.domain,
 		MaxAge:   int((30 * 24 * time.Hour).Seconds()),
 		HttpOnly: true,
 		Secure:   sm.secure,
