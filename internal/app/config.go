@@ -16,9 +16,10 @@ import (
 
 type Config struct {
 	// App
-	AppEnv    string
-	AppPort   string
-	AppSecret string
+	AppEnv     string
+	AppPort    string
+	AppSecret  string
+	BaseDomain string // Suffix used for multi-portal host-matching and cookie scope
 
 	// Database
 	DatabaseURL string
@@ -42,13 +43,23 @@ type Config struct {
 }
 
 // LoadConfig loads and validates all environment variables.
+// AppEnv defaults to development. BaseDomain defaults based on environment.
 func LoadConfig() (*Config, error) {
 	_ = godotenv.Load()
 
+	appEnv := getEnv("APP_ENV", "development")
+
 	cfg := &Config{
-		AppEnv:  getEnv("APP_ENV", "development"),
+		AppEnv:  appEnv,
 		AppPort: getEnv("PORT", getEnv("APP_PORT", "8080")),
 	}
+
+	// Sane default for BaseDomain based on APP_ENV
+	defaultDomain := "localhost"
+	if appEnv == "production" {
+		defaultDomain = "vallescentrales.com"
+	}
+	cfg.BaseDomain = getEnv("BASE_DOMAIN", defaultDomain)
 
 	// Required
 	var errs []error
@@ -70,23 +81,21 @@ func LoadConfig() (*Config, error) {
 	}
 
 	// Optional — Google OAuth
-	cfg.GoogleClientID     = getEnv("GOOGLE_CLIENT_ID", "")
+	cfg.GoogleClientID = getEnv("GOOGLE_CLIENT_ID", "")
 	cfg.GoogleClientSecret = getEnv("GOOGLE_CLIENT_SECRET", "")
-	cfg.GoogleRedirectURL  = getEnv("GOOGLE_REDIRECT_URL", "")
+	cfg.GoogleRedirectURL = getEnv("GOOGLE_REDIRECT_URL", "")
 
 	// Optional — WebAuthn
-	// WEBAUTHN_RP_ID:      the domain (e.g. vallescentrales.com)
-	// WEBAUTHN_ORIGINS:    comma-separated origins (e.g. https://vallescentrales.com)
-	cfg.WebAuthnRPID          = getEnv("WEBAUTHN_RP_ID", "localhost")
+	cfg.WebAuthnRPID = getEnv("WEBAUTHN_RP_ID", "localhost")
 	cfg.WebAuthnRPDisplayName = getEnv("WEBAUTHN_RP_DISPLAY_NAME", "Valles Centrales")
-	originsStr               := getEnv("WEBAUTHN_ORIGINS", "http://localhost:8080")
-	cfg.WebAuthnOrigins        = splitAndTrim(originsStr)
+	originsStr := getEnv("WEBAUTHN_ORIGINS", "http://localhost:8080")
+	cfg.WebAuthnOrigins = splitAndTrim(originsStr)
 
 	// Optional — Storage
 	cfg.R2AccountID = getEnv("R2_ACCOUNT_ID", "")
 	cfg.R2AccessKey = getEnv("R2_ACCESS_KEY", "")
 	cfg.R2SecretKey = getEnv("R2_SECRET_KEY", "")
-	cfg.R2Bucket    = getEnv("R2_BUCKET", "")
+	cfg.R2Bucket = getEnv("R2_BUCKET", "")
 	cfg.R2PublicURL = getEnv("R2_PUBLIC_URL", "")
 
 	return cfg, nil

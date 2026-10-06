@@ -24,13 +24,15 @@ import (
 // ListingHandler handles all listing HTTP endpoints.
 type ListingHandler struct {
 	listings *repo.ListingRepo
+	users    *repo.UserRepo
 	render   Renderer
 }
 
 // NewListingHandler creates a ListingHandler.
-func NewListingHandler(listings *repo.ListingRepo, render Renderer) *ListingHandler {
+func NewListingHandler(listings *repo.ListingRepo, users *repo.UserRepo, render Renderer) *ListingHandler {
 	return &ListingHandler{
 		listings: listings,
+		users:    users,
 		render:   render,
 	}
 }
@@ -145,14 +147,28 @@ func (h *ListingHandler) HandleGetListing(w http.ResponseWriter, r *http.Request
 		listing.Media = media
 	}
 
+	// Fetch listing owner details securely
+	owner, err := h.users.GetByID(r.Context(), listing.OwnerID)
+	if err != nil {
+		slog.Error("failed to load listing owner", "owner_id", listing.OwnerID, "listing_id", listing.ID, "error", err)
+		respondError(w, http.StatusInternalServerError, "failed to load listing owner info")
+		return
+	}
+
 	go func(ctx context.Context, id uuid.UUID) {
 		if err := h.listings.IncrementViewCount(ctx, id); err != nil {
 			slog.Warn("failed to increment view count", "listing_id", id, "error", err)
 		}
 	}(context.Background(), listing.ID)
 
+	canContact := user != nil
+	isOwner := user != nil && listing.IsOwnedBy(user.ID)
+
 	h.render.Render(w, r, "listing_detail.tmpl", h.pageData(r, listing.Title, map[string]any{
-		"Listing": listing,
+		"Listing":    listing,
+		"Owner":      owner,
+		"CanContact": canContact,
+		"IsOwner":    isOwner,
 	}))
 }
 
@@ -325,7 +341,6 @@ func (h *ListingHandler) HandleEditListingPage(w http.ResponseWriter, r *http.Re
 }
 
 // HandleEditListing processes the edit form.
-// TODO: full listing update save next.
 func (h *ListingHandler) HandleEditListing(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
@@ -345,7 +360,6 @@ func (h *ListingHandler) HandleEditListing(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Placeholder until repo.UpdateListing exists
 	http.Redirect(w, r, "/listings/"+listing.Slug, http.StatusSeeOther)
 }
 

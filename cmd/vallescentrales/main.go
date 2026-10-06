@@ -82,7 +82,7 @@ func main() {
 
 	// Handlers
 	authH := handlers.NewAuthHandler(userRepo, sessionMgr, googleAuth, tmpl)
-	listingH := handlers.NewListingHandler(listingRepo, tmpl)
+	listingH := handlers.NewListingHandler(listingRepo, userRepo, tmpl)
 	profileH := handlers.NewProfileHandler(userRepo, passkeyRepo, tmpl)
 	passkeyH := handlers.NewPasskeyHandler(webAuthn, passkeyRepo, userRepo, sessionMgr)
 	uploadH := handlers.NewUploadHandler(storageSvc, listingRepo, userRepo)

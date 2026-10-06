@@ -108,7 +108,13 @@ func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 
-	if err := tmpl.ExecuteTemplate(w, "base", data); err != nil {
+	// The Gateway Hub uses an isolated layout to prevent CSS leaks with Bienes Raíces
+	targetTemplate := "base"
+	if name == "hub.tmpl" {
+		targetTemplate = "hub_layout"
+	}
+
+	if err := tmpl.ExecuteTemplate(w, targetTemplate, data); err != nil {
 		slog.Error("template execution failed", "name", name, "error", err)
 		return
 	}
