@@ -1,6 +1,4 @@
 // internal/handlers/auth_handler.go
-// Handles registration, login, logout, and Google OAuth.
-// Rule 42: handlers = HTTP only. No SQL. No business logic.
 
 package handlers
 
@@ -8,6 +6,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"vallescentrales/internal/auth"
@@ -15,63 +14,50 @@ import (
 	"vallescentrales/internal/repo"
 )
 
-// AuthHandler handles all authentication HTTP endpoints.
 type AuthHandler struct {
 	users      *repo.UserRepo
 	sessions   *auth.SessionManager
 	googleAuth *auth.GoogleOAuth
 	render     Renderer
+	production bool
 }
 
-// NewAuthHandler creates an AuthHandler.
-func NewAuthHandler(users *repo.UserRepo, sessions *auth.SessionManager, googleAuth *auth.GoogleOAuth, render Renderer) *AuthHandler {
+func NewAuthHandler(
+	users *repo.UserRepo,
+	sessions *auth.SessionManager,
+	googleAuth *auth.GoogleOAuth,
+	render Renderer,
+	production bool,
+) *AuthHandler {
 	return &AuthHandler{
 		users:      users,
 		sessions:   sessions,
 		googleAuth: googleAuth,
 		render:     render,
+		production: production,
 	}
 }
 
-// GoogleEnabled returns true if Google OAuth is available.
-func (h *AuthHandler) GoogleEnabled() bool {
-	return h.googleAuth != nil && h.googleAuth.Enabled()
-}
-
-// renderPage renders an HTML template with all required data injected.
-func (h *AuthHandler) renderPage(w http.ResponseWriter, r *http.Request, tmpl string, data map[string]any) {
+func (h *AuthHandler) renderPage(w http.ResponseWriter, r *http.Request, name string, data map[string]any) {
 	if data == nil {
 		data = make(map[string]any)
 	}
-
-	data["User"]          = middleware.UserFromContext(r.Context())
-	data["GoogleEnabled"] = h.GoogleEnabled()
-	data["NeedsAuthJS"]   = true
-	data["CSRFToken"]     = middleware.CSRFToken(r)
-
-	if data["Meta"] == nil {
-		data["Meta"] = map[string]string{"Title": "", "Description": ""}
-	}
-	if data["Flash"] == nil {
-		data["Flash"] = nil
-	}
-
-	if h.render != nil {
-		h.render.Render(w, r, tmpl, data)
-		return
-	}
-
-	respond(w, http.StatusOK, data)
+	data["GoogleEnabled"] = h.googleAuth.Enabled()
+	data["CSRFToken"] = middleware.CSRFToken(r)
+	data["User"] = middleware.UserFromContext(r.Context())
+	h.render.Render(w, r, name, data)
 }
 
-// HandleRegisterPage serves the registration form.
 func (h *AuthHandler) HandleRegisterPage(w http.ResponseWriter, r *http.Request) {
+	if middleware.UserFromContext(r.Context()) != nil {
+		http.Redirect(w, r, "/cuenta", http.StatusSeeOther)
+		return
+	}
 	h.renderPage(w, r, "register.tmpl", map[string]any{
 		"Meta": map[string]string{"Title": "Crear Cuenta"},
 	})
 }
 
-// HandleRegister processes a new user registration via email + password.
 func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		h.renderPage(w, r, "register.tmpl", map[string]any{
@@ -81,27 +67,36 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	email    := strings.TrimSpace(strings.ToLower(r.FormValue("email")))
-	password := r.FormValue("password")
 	fullName := strings.TrimSpace(r.FormValue("full_name"))
+	email := strings.TrimSpace(r.FormValue("email"))
+	password := r.FormValue("password")
 
 	formData := map[string]string{
-		"Email":    email,
 		"FullName": fullName,
+		"Email":    email,
 	}
 
-	if email == "" || password == "" || fullName == "" {
+	if fullName == "" {
 		h.renderPage(w, r, "register.tmpl", map[string]any{
-			"Error":    "Nombre, correo y contraseña son obligatorios",
+			"Error":    "El nombre completo es obligatorio",
 			"FormData": formData,
 			"Meta":     map[string]string{"Title": "Crear Cuenta"},
 		})
 		return
 	}
 
-	if !strings.Contains(email, "@") {
+	if email == "" {
 		h.renderPage(w, r, "register.tmpl", map[string]any{
-			"Error":    "Correo electrónico inválido",
+			"Error":    "El correo electrónico es obligatorio",
+			"FormData": formData,
+			"Meta":     map[string]string{"Title": "Crear Cuenta"},
+		})
+		return
+	}
+
+	if len(password) < 12 {
+		h.renderPage(w, r, "register.tmpl", map[string]any{
+			"Error":    "La contraseña debe tener al menos 12 caracteres",
 			"FormData": formData,
 			"Meta":     map[string]string{"Title": "Crear Cuenta"},
 		})
@@ -110,16 +105,9 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 
 	passwordHash, err := auth.HashPassword(password)
 	if err != nil {
-		errMsg := "Error al crear la cuenta"
-		if errors.Is(err, auth.ErrPasswordTooShort) {
-			errMsg = "La contraseña debe tener al menos 12 caracteres"
-		} else if errors.Is(err, auth.ErrPasswordTooLong) {
-			errMsg = "La contraseña debe tener 72 caracteres o menos"
-		} else {
-			slog.Error("failed to hash password during registration", "error", err)
-		}
+		slog.Error("failed to hash password", "error", err)
 		h.renderPage(w, r, "register.tmpl", map[string]any{
-			"Error":    errMsg,
+			"Error":    "Error al procesar el registro",
 			"FormData": formData,
 			"Meta":     map[string]string{"Title": "Crear Cuenta"},
 		})
@@ -148,26 +136,38 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 			"user_id", user.ID, "error", err,
 		)
 		h.renderPage(w, r, "register.tmpl", map[string]any{
-			"Error": "Error al crear la cuenta",
+			"Error": "Cuenta creada pero falló el inicio de sesión automático. Por favor ingresa.",
 			"Meta":  map[string]string{"Title": "Crear Cuenta"},
 		})
 		return
 	}
 
-	slog.Info("user registered", "user_id", user.ID, "email", user.Email, "provider", "email")
-	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+	slog.Info("user registered and logged in",
+		"user_id", user.ID,
+		"email", user.Email,
+		"provider", "email",
+	)
+
+	http.Redirect(w, r, "/cuenta", http.StatusSeeOther)
 }
-// HandleLoginPage serves the email/password login page.
+
 func (h *AuthHandler) HandleLoginPage(w http.ResponseWriter, r *http.Request) {
+	if middleware.UserFromContext(r.Context()) != nil {
+		http.Redirect(w, r, "/cuenta", http.StatusSeeOther)
+		return
+	}
+
 	redirect := r.URL.Query().Get("redirect")
+	if !isSafeRedirect(redirect) {
+		redirect = ""
+	}
 
 	h.renderPage(w, r, "login.tmpl", map[string]any{
-		"Meta":     map[string]string{"Title": "Ingresar"},
 		"Redirect": redirect,
+		"Meta":     map[string]string{"Title": "Ingresar"},
 	})
 }
 
-// HandleLogin processes a login attempt via email + password.
 func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		h.renderPage(w, r, "login.tmpl", map[string]any{
@@ -177,15 +177,17 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	email := strings.TrimSpace(strings.ToLower(r.FormValue("email")))
+	email := strings.TrimSpace(r.FormValue("email"))
 	password := r.FormValue("password")
-	redirect := strings.TrimSpace(r.FormValue("redirect"))
+	redirect := r.FormValue("redirect")
 
-	formData := map[string]string{"Email": email}
+	formData := map[string]string{
+		"Email": email,
+	}
 
 	if email == "" || password == "" {
 		h.renderPage(w, r, "login.tmpl", map[string]any{
-			"Error":    "Correo y contraseña son obligatorios",
+			"Error":    "Introduce tu correo y contraseña",
 			"FormData": formData,
 			"Redirect": redirect,
 			"Meta":     map[string]string{"Title": "Ingresar"},
@@ -195,26 +197,9 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.users.GetByEmail(r.Context(), email)
 	if err != nil {
-		if errors.Is(err, repo.ErrNotFound) {
-			h.renderPage(w, r, "login.tmpl", map[string]any{
-				"Error":    "Correo o contraseña incorrectos",
-				"FormData": formData,
-				"Redirect": redirect,
-				"Meta":     map[string]string{"Title": "Ingresar"},
-			})
-			return
+		if !errors.Is(err, repo.ErrNotFound) {
+			slog.Error("failed to lookup user by email", "email", email, "error", err)
 		}
-		slog.Error("failed to fetch user during login", "email", email, "error", err)
-		h.renderPage(w, r, "login.tmpl", map[string]any{
-			"Error":    "Error al iniciar sesión",
-			"Redirect": redirect,
-			"Meta":     map[string]string{"Title": "Ingresar"},
-		})
-		return
-	}
-
-	if !user.HasPassword() {
-		slog.Info("email login attempt on passwordless account", "email", email)
 		h.renderPage(w, r, "login.tmpl", map[string]any{
 			"Error":    "Correo o contraseña incorrectos",
 			"FormData": formData,
@@ -224,8 +209,17 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !user.HasPassword() {
+		h.renderPage(w, r, "login.tmpl", map[string]any{
+			"Error":    "Esta cuenta fue creada con Google. Inicia sesión con Google.",
+			"FormData": formData,
+			"Redirect": redirect,
+			"Meta":     map[string]string{"Title": "Ingresar"},
+		})
+		return
+	}
+
 	if err := auth.VerifyPassword(password, *user.PasswordHash); err != nil {
-		slog.Info("failed login attempt", "email", email)
 		h.renderPage(w, r, "login.tmpl", map[string]any{
 			"Error":    "Correo o contraseña incorrectos",
 			"FormData": formData,
@@ -250,8 +244,7 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	slog.Info("user logged in", "user_id", user.ID, "email", user.Email, "provider", "email")
 
-	// Redirect to target path if safe, otherwise default to user dashboard
-	target := "/cuenta" // Matches your auth router dashboard endpoint
+	target := "/cuenta"
 	if isSafeRedirect(redirect) {
 		target = redirect
 	}
@@ -259,105 +252,102 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, target, http.StatusSeeOther)
 }
 
-// isSafeRedirect checks if the redirect target is local to prevent open-redirect attacks.
-func isSafeRedirect(url string) bool {
-	if url == "" {
-		return false
-	}
-	// Must start with '/' and not '//' (which browser parses as protocol-relative schemas)
-	return strings.HasPrefix(url, "/") && !strings.HasPrefix(url, "//")
-}
-
-
-// HandleLogout destroys the session and clears the cookie.
 func (h *AuthHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
-	user := middleware.UserFromContext(r.Context())
-
 	if err := h.sessions.Destroy(r.Context(), w, r); err != nil {
 		slog.Error("failed to destroy session on logout", "error", err)
 	}
-
-	if user != nil {
-		slog.Info("user logged out", "user_id", user.ID)
-	}
-
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-// HandleGoogleLogin redirects to Google's consent screen.
 func (h *AuthHandler) HandleGoogleLogin(w http.ResponseWriter, r *http.Request) {
-	if !h.GoogleEnabled() {
-		respondError(w, http.StatusNotImplemented, "google login not configured")
+	if !h.googleAuth.Enabled() {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 	h.googleAuth.RedirectToGoogle(w, r)
 }
 
-// HandleGoogleCallback processes the redirect back from Google.
 func (h *AuthHandler) HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
-	if !h.GoogleEnabled() {
-		respondError(w, http.StatusNotImplemented, "google login not configured")
+	if !h.googleAuth.Enabled() {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
 	googleUser, err := h.googleAuth.ProcessCallback(w, r)
 	if err != nil {
 		slog.Error("google oauth callback failed", "error", err)
-		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
 	ctx := r.Context()
 
-	// Try existing Google user
+	// 1. Existing Google user
 	user, err := h.users.GetByGoogleID(ctx, googleUser.ID)
 	if err == nil {
 		_, err = h.sessions.Create(ctx, w, user.ID)
 		if err != nil {
 			slog.Error("failed to create session for google user", "user_id", user.ID, "error", err)
-			http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
 		slog.Info("user logged in via google", "user_id", user.ID, "email", user.Email)
-		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		http.Redirect(w, r, "/cuenta", http.StatusSeeOther)
 		return
 	}
 
-	// Check if email exists — link accounts
+	// 2. Existing email user — link accounts
 	existingUser, err := h.users.GetByEmail(ctx, googleUser.Email)
 	if err == nil {
 		user, err = h.users.LinkGoogleAccount(ctx, existingUser.ID, googleUser.ID)
 		if err != nil {
 			slog.Error("failed to link google account", "user_id", existingUser.ID, "error", err)
-			http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
 		_, err = h.sessions.Create(ctx, w, user.ID)
 		if err != nil {
 			slog.Error("failed to create session after google link", "user_id", user.ID, "error", err)
-			http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
 		slog.Info("google account linked", "user_id", user.ID, "email", user.Email)
-		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		http.Redirect(w, r, "/cuenta", http.StatusSeeOther)
 		return
 	}
 
-	// New Google user
+	// 3. New user registration via Google
 	user, err = h.users.CreateGoogle(ctx, googleUser.Email, googleUser.Name, googleUser.ID)
 	if err != nil {
 		slog.Error("failed to create google user", "email", googleUser.Email, "error", err)
-		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
 	_, err = h.sessions.Create(ctx, w, user.ID)
 	if err != nil {
 		slog.Error("failed to create session for new google user", "user_id", user.ID, "error", err)
-		http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
 	slog.Info("user registered via google", "user_id", user.ID, "email", user.Email)
-	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+	http.Redirect(w, r, "/cuenta", http.StatusSeeOther)
+}
+
+func isSafeRedirect(target string) bool {
+	if target == "" {
+		return false
+	}
+	if !strings.HasPrefix(target, "/") {
+		return false
+	}
+	if strings.HasPrefix(target, "//") {
+		return false
+	}
+	u, err := url.Parse(target)
+	if err != nil {
+		return false
+	}
+	return u.Host == "" && u.Scheme == ""
 }

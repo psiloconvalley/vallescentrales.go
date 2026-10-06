@@ -1,11 +1,5 @@
 // internal/auth/google.go
 // Google OAuth 2.0 flow — redirect, callback, user info.
-// Improved from psiloconvalley reference:
-//   → Config injected via struct, not global var
-//   → slog throughout
-//   → SameSite=Lax on state cookie (required for OAuth cross-site redirects)
-//   → Validates token expiry
-//   → Secure flag from config, not env check
 
 package auth
 
@@ -17,6 +11,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -44,14 +39,27 @@ type GoogleUser struct {
 type GoogleOAuth struct {
 	config *oauth2.Config
 	secure bool
+	domain string
 }
 
 // NewGoogleOAuth creates a GoogleOAuth handler.
 // Returns nil if clientID is empty — Google OAuth is optional.
-func NewGoogleOAuth(clientID, clientSecret, redirectURL string, secure bool) *GoogleOAuth {
+func NewGoogleOAuth(clientID, clientSecret, redirectURL string, secure bool, baseDomain string) *GoogleOAuth {
 	if clientID == "" {
 		slog.Info("google oauth not configured — feature disabled")
 		return nil
+	}
+
+	cookieDomain := ""
+	if secure && baseDomain != "" && baseDomain != "localhost" && baseDomain != "127.0.0.1" {
+		if idx := strings.Index(baseDomain, ":"); idx != -1 {
+			baseDomain = baseDomain[:idx]
+		}
+		if !strings.HasPrefix(baseDomain, ".") {
+			cookieDomain = "." + baseDomain
+		} else {
+			cookieDomain = baseDomain
+		}
 	}
 
 	return &GoogleOAuth{
@@ -66,6 +74,7 @@ func NewGoogleOAuth(clientID, clientSecret, redirectURL string, secure bool) *Go
 			Endpoint: google.Endpoint,
 		},
 		secure: secure,
+		domain: cookieDomain,
 	}
 }
 
@@ -154,12 +163,12 @@ func (g *GoogleOAuth) fetchUser(ctx context.Context, token *oauth2.Token) (*Goog
 }
 
 // setStateCookie writes the CSRF state cookie.
-// SameSite=Lax is required for OAuth flows — Strict blocks the callback redirect.
 func (g *GoogleOAuth) setStateCookie(w http.ResponseWriter, state string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     oauthStateCookie,
 		Value:    state,
 		Path:     "/",
+		Domain:   g.domain,
 		MaxAge:   stateCookieMaxAge,
 		HttpOnly: true,
 		Secure:   g.secure,
@@ -200,8 +209,11 @@ func (g *GoogleOAuth) clearStateCookie(w http.ResponseWriter) {
 		Name:     oauthStateCookie,
 		Value:    "",
 		Path:     "/",
+		Domain:   g.domain,
 		MaxAge:   -1,
 		HttpOnly: true,
+		Secure:   g.secure,
+		SameSite: http.SameSiteLaxMode,
 	})
 }
 
@@ -209,7 +221,7 @@ func (g *GoogleOAuth) clearStateCookie(w http.ResponseWriter) {
 func generateStateToken() (string, error) {
 	b := make([]byte, stateTokenBytes)
 	if _, err := rand.Read(b); err != nil {
-		return "", fmt.Errorf("generateStateToken: %w", err)
+		return "", fmt.Errorf("generateStateToken: failed to read random bytes: %w", err)
 	}
 	return base64.URLEncoding.EncodeToString(b), nil
 }

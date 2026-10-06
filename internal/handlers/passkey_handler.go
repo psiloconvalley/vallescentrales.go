@@ -365,7 +365,7 @@ func (h *PasskeyHandler) HandleLoginFinish(w http.ResponseWriter, r *http.Reques
 
 	respond(w, http.StatusOK, map[string]string{
 		"message":  "authenticated",
-		"redirect": "/dashboard",
+		"redirect": "/cuenta",
 	})
 }
 

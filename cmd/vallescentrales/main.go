@@ -47,6 +47,7 @@ func main() {
 		cfg.GoogleClientSecret,
 		cfg.GoogleRedirectURL,
 		cfg.IsProduction(),
+		cfg.BaseDomain,
 	)
 
 	// WebAuthn (passkeys)
@@ -82,7 +83,7 @@ func main() {
 	}
 
 	// Handlers
-	authH := handlers.NewAuthHandler(userRepo, sessionMgr, googleAuth, tmpl)
+	authH := handlers.NewAuthHandler(userRepo, sessionMgr, googleAuth, tmpl, cfg.IsProduction())
 	listingH := handlers.NewListingHandler(listingRepo, userRepo, tmpl)
 	profileH := handlers.NewProfileHandler(userRepo, passkeyRepo, listingRepo, tmpl)
 	passkeyH := handlers.NewPasskeyHandler(webAuthn, passkeyRepo, userRepo, sessionMgr)

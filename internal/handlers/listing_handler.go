@@ -321,12 +321,12 @@ func (h *ListingHandler) HandleEditListingPage(w http.ResponseWriter, r *http.Re
 	slug := chi.URLParam(r, "slug")
 	listing, err := h.listings.GetBySlug(r.Context(), slug)
 	if err != nil {
-		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		http.Redirect(w, r, "/cuenta", http.StatusSeeOther)
 		return
 	}
 
 	if !listing.IsOwnedBy(user.ID) && !user.IsAdmin() {
-		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		http.Redirect(w, r, "/cuenta", http.StatusSeeOther)
 		return
 	}
 
@@ -351,12 +351,12 @@ func (h *ListingHandler) HandleEditListing(w http.ResponseWriter, r *http.Reques
 	slug := chi.URLParam(r, "slug")
 	listing, err := h.listings.GetBySlug(r.Context(), slug)
 	if err != nil {
-		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		http.Redirect(w, r, "/cuenta", http.StatusSeeOther)
 		return
 	}
 
 	if !listing.IsOwnedBy(user.ID) && !user.IsAdmin() {
-		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		http.Redirect(w, r, "/cuenta", http.StatusSeeOther)
 		return
 	}
 
@@ -374,12 +374,12 @@ func (h *ListingHandler) HandlePublishListing(w http.ResponseWriter, r *http.Req
 	slug := chi.URLParam(r, "slug")
 	listing, err := h.listings.GetBySlug(r.Context(), slug)
 	if err != nil {
-		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		http.Redirect(w, r, "/cuenta", http.StatusSeeOther)
 		return
 	}
 
 	if !listing.IsOwnedBy(user.ID) && !user.IsAdmin() {
-		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		http.Redirect(w, r, "/cuenta", http.StatusSeeOther)
 		return
 	}
 
@@ -449,7 +449,7 @@ func (h *ListingHandler) HandleDeleteListing(w http.ResponseWriter, r *http.Requ
 	}
 
 	slog.Info("listing archived", "listing_id", listing.ID, "owner_id", user.ID)
-	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+	http.Redirect(w, r, "/cuenta", http.StatusSeeOther)
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
