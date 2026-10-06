@@ -262,7 +262,7 @@ a:hover { color: var(--accent-dark); }
 .footer {
     background: var(--obsidian);
     color: rgba(255,255,255,0.4);
-    padding: var(--s5) 0;
+    padding: 1.75rem 0; /* Snappy, compact vertical padding on mobile */
     font-size: 0.8125rem;
 }
 
@@ -274,33 +274,44 @@ a:hover { color: var(--accent-dark); }
 
 .footer-top {
     display: flex;
-    justify-content: center;
+    flex-direction: column; /* Stack cleanly on mobile */
     align-items: center;
-    flex-wrap: wrap;
-    gap: var(--s3);
-    padding-bottom: var(--s3);
+    gap: 0.75rem; /* Tighter gaps for better visual grouping */
+    padding-bottom: 1rem;
     border-bottom: 1px solid rgba(255,255,255,0.08);
-    margin-bottom: var(--s3);
+    margin-bottom: 1rem;
+}
+
+.footer-brand {
+    font-family: var(--font-heading);
+    font-size: 1.125rem; /* Clean, responsive brand font scale */
+    font-weight: 700;
+    color: rgba(255,255,255,0.78);
+    letter-spacing: 0.02em;
+}
+
+.footer-links {
+    display: flex;
+    gap: 1.25rem; /* Close, readable link group */
 }
 
 .footer-bottom {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--s1);
+    gap: 0.5rem; /* Compact layout spacing */
     text-align: center;
 }
 
-.footer-brand {
-    font-family: var(--font-heading);
-    font-size: 1.375rem;
-    font-weight: 700;
-    color: rgba(255,255,255,0.78);
+.footer a {
+    color: rgba(255,255,255,0.4);
+    text-decoration: none;
+    transition: color 0.15s ease;
 }
 
-.footer-links { display: flex; gap: var(--s3); }
-.footer a { color: rgba(255,255,255,0.4); }
-.footer a:hover { color: white; }
+.footer a:hover {
+    color: white;
+}
 
 .footer-tech {
     font-family: var(--font-mono);
@@ -309,33 +320,24 @@ a:hover { color: var(--accent-dark); }
     text-transform: uppercase;
     color: rgba(255,255,255,0.25);
 }
-
-/* ═══ RESPONSIVE ═══ */
-
 @media (min-width: 768px) {
-    h1 { font-size: 3rem; }
-    h2 { font-size: 2.125rem; }
+    /* ... (keep other existing styles inside your media query) ... */
 
-    .container { padding: 0 var(--s3); }
-    .main-content { padding: var(--s5) 0; }
+    .footer {
+        padding: 2.5rem 0; /* Spacious desktop padding */
+    }
 
-    .nav-inner { padding: 10px var(--s3); }
-    .nav-logo-svg { height: 38px; }
-
-    /* Hide mobile, show desktop */
-    .nav-hamburger { display: none; }
-    .nav-menu { display: none !important; }
-    .nav-desktop { display: block; }
+    .footer-top {
+        flex-direction: row; /* Horizontal alignment */
+        justify-content: space-between;
+        padding-bottom: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
 
     .footer-bottom {
-        flex-direction: row;
+        flex-direction: row; /* Horizontal alignment */
         justify-content: space-between;
+        width: 100%;
+        gap: 0;
     }
-}
-
-@media (min-width: 1024px) {
-    h1 { font-size: 4rem; }
-    h2 { font-size: 2.5rem; }
-    .nav-inner { padding: 10px var(--s4); }
-    .nav-logo-svg { height: 42px; }
 }
