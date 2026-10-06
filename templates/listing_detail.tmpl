@@ -13,8 +13,12 @@
     <main class="listing-main">
       <header class="listing-header">
         <div class="listing-badges">
-          <span class="badge badge-operation badge-{{.Listing.OperationType}}">{{operationLabel .Listing.OperationType}}</span>
-          <span class="badge badge-property">{{propertyLabel .Listing.PropertyType}}</span>
+          <span class="badge badge-operation badge-{{.Listing.OperationType}}">
+            {{if eq .Listing.OperationType "sale"}}Venta{{else if eq .Listing.OperationType "rent"}}Renta{{else if eq .Listing.OperationType "temporary_rental"}}Renta Temporal{{else}}{{.Listing.OperationType}}{{end}}
+          </span>
+          <span class="badge badge-property">
+            {{if eq .Listing.PropertyType "land"}}Terreno{{else if eq .Listing.PropertyType "house"}}Casa{{else if eq .Listing.PropertyType "apartment"}}Departamento{{else if eq .Listing.PropertyType "commercial"}}Local Comercial{{else if eq .Listing.PropertyType "office"}}Oficina{{else}}{{.Listing.PropertyType}}{{end}}
+          </span>
           {{if .Listing.IsFeatured}}
             <span class="badge badge-featured">Destacada</span>
           {{end}}
@@ -112,10 +116,14 @@
               <span class="spec-val">{{.Listing.ParkingSpots}}</span>
             </div>
           {{end}}
-          <div class="spec-card">
-            <span class="spec-label">Régimen Legal</span>
-            <span class="spec-val">{{propertyRegimeLabel .Listing.PropertyType}}</span>
-          </div>
+          {{if .Listing.LegalRegime}}
+            <div class="spec-card">
+              <span class="spec-label">Régimen Legal</span>
+              <span class="spec-val">
+                {{if eq .Listing.LegalRegime "escritura_publica"}}Escritura Pública{{else if eq .Listing.LegalRegime "comunal"}}Comunal{{else if eq .Listing.LegalRegime "ejidal"}}Ejidal{{else}}{{.Listing.LegalRegime}}{{end}}
+              </span>
+            </div>
+          {{end}}
         </div>
       </section>
 
