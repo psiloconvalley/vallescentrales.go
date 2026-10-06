@@ -1,9 +1,4 @@
 // internal/app/templates.go
-// Template renderer — parses all templates at startup,
-// executes them safely on every request.
-// Injects AssetVersion on every render for cache busting.
-// Registers currency helpers for consistent MXN/USD display.
-
 package app
 
 import (
@@ -19,15 +14,11 @@ import (
 )
 
 // TemplateRenderer holds all parsed templates and the asset version.
-// Parsed once at startup — never on each request.
 type TemplateRenderer struct {
 	templates    map[string]*template.Template
 	assetVersion string
 }
 
-// NewTemplateRenderer parses all templates from the templates/ directory.
-// AssetVersion changes every deploy/startup.
-// CurrencyService is optional but recommended.
 func NewTemplateRenderer(currency *services.CurrencyService) (*TemplateRenderer, error) {
 	templates := make(map[string]*template.Template)
 
@@ -50,8 +41,11 @@ func NewTemplateRenderer(currency *services.CurrencyService) (*TemplateRenderer,
 	pages = append(pages, authPages...)
 
 	funcs := template.FuncMap{
-		"formatMXN":    services.FormatMXN,
-		"formatUSD":    services.FormatUSD,
+		"add": func(a, b int) int {
+			return a + b
+		},
+		"formatMXN": services.FormatMXN,
+		"formatUSD": services.FormatUSD,
 		"convertToUSD": func(mxn float64) float64 {
 			if currency == nil {
 				return 0
@@ -150,7 +144,6 @@ func NewTemplateRenderer(currency *services.CurrencyService) (*TemplateRenderer,
 	}, nil
 }
 
-// Render executes a named template and writes it to the response.
 func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name string, data any) {
 	tmpl, ok := tr.templates[name]
 	if !ok {
@@ -166,7 +159,6 @@ func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 
-	// The Gateway Hub uses an isolated layout to prevent CSS leaks with Bienes Raíces
 	targetTemplate := "base"
 	if name == "hub.tmpl" {
 		targetTemplate = "hub_layout"

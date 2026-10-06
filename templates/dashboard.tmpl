@@ -1,40 +1,156 @@
 {{define "content"}}
-<div class="container py-4">
-    <header class="dashboard-header d-flex justify-between align-center">
-        <div>
-            <h1>Mi Panel de Control</h1>
-            <p class="text-muted">Administra tus publicaciones y datos de contacto en Valles Centrales</p>
-        </div>
-        <a href="/cuenta/perfil" class="btn btn-secondary btn-sm">Editar Perfil</a>
-    </header>
-
-    <div class="dashboard-content mt-4">
-        <div class="dashboard-actions mb-3">
-            <a href="/publicar" class="btn btn-primary">+ Publicar Propiedad</a>
-        </div>
-
-        {{if .Listings}}
-        <div class="dashboard-list card">
-            {{range .Listings}}
-            <div class="dashboard-item d-flex justify-between align-center p-3">
-                <div class="item-meta">
-                    <h3>{{.Title}}</h3>
-                    <p class="font-sm text-muted">📍 {{.Municipality}} • Estado: <strong>{{.Status}}</strong> • 👁️ {{.ViewCount}} vistas</p>
-                </div>
-                <div class="item-actions d-flex gap-2">
-                    <a href="/propiedades/{{.Slug}}/editar" class="btn btn-outline btn-sm">Editar</a>
-                    <a href="/propiedades/{{.Slug}}" class="btn btn-secondary btn-sm" target="_blank">Ver</a>
-                </div>
-            </div>
-            {{end}}
-        </div>
+<div class="container py-5 dashboard-page">
+  <!-- Minimalist Premium Header -->
+  <header class="dashboard-hero-header">
+    <div class="header-profile-summary">
+      <div class="profile-avatar-wrapper">
+        {{if .User.AvatarURL}}
+          <img src="{{.User.AvatarURL}}" alt="{{.User.DisplayNameOrFull}}" class="dashboard-user-avatar">
         {{else}}
-        <div class="empty-state card p-5 text-center">
-            <h2>Aún no tienes propiedades publicadas</h2>
-            <p class="text-muted">Comienza publicando tu primer terreno, casa o local comercial hoy mismo.</p>
-            <a href="/publicar" class="btn btn-primary mt-3">Publicar Ahora →</a>
-        </div>
+          <div class="dashboard-user-avatar avatar-fallback">
+            {{slice .User.DisplayNameOrFull 0 1}}
+          </div>
         {{end}}
+      </div>
+      <div class="header-text">
+        <span class="welcome-label">Panel de Control</span>
+        <h1 class="welcome-title">¡Hola, {{.User.DisplayNameOrFull}}!</h1>
+        <p class="welcome-subtitle">Administra tus publicaciones y estadísticas en tiempo real.</p>
+      </div>
     </div>
+    
+    <div class="header-actions">
+      <a href="/cuenta/perfil" class="btn btn-outline">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        Editar Perfil
+      </a>
+      <a href="/publicar" class="btn btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16" aria-hidden="true">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Nueva Propiedad
+      </a>
+    </div>
+  </header>
+
+  <!-- Metric Overview Grid -->
+  <section class="metrics-grid mt-4">
+    <div class="metric-card">
+      <span class="metric-label">Anuncios Activos</span>
+      <span class="metric-value">{{if .Listings}}{{len .Listings}}{{else}}0{{end}}</span>
+      <span class="metric-subtext">Propiedades publicadas</span>
+    </div>
+    <div class="metric-card">
+      <span class="metric-label">Vistas Totales</span>
+      <span class="metric-value">
+        {{$totalViews := 0}}
+        {{if .Listings}}
+          {{range .Listings}}
+            {{$totalViews = add $totalViews .ViewCount}}
+          {{end}}
+        {{end}}
+        {{$totalViews}}
+      </span>
+      <span class="metric-subtext">Interacciones acumuladas</span>
+    </div>
+    <div class="metric-card">
+      <span class="metric-label">Tipo de Cuenta</span>
+      <span class="metric-value capitalize-text">
+        {{if eq .User.Role "agent"}}Agente{{else if eq .User.Role "owner"}}Propietario{{else}}{{.User.Role}}{{end}}
+      </span>
+      <span class="metric-subtext">Vendedor Verificado</span>
+    </div>
+  </section>
+
+  <!-- Listings Control Center -->
+  <div class="dashboard-content-wrapper mt-5">
+    <div class="section-title-row">
+      <h2>Tus Propiedades</h2>
+      <p class="section-subtitle">Gestiona el estado, edita o visualiza tus publicaciones directas.</p>
+    </div>
+
+    {{if .Listings}}
+      <div class="listings-table-grid mt-4">
+        {{range .Listings}}
+          <div class="dashboard-property-card">
+            <!-- Thumbnail Cover -->
+            <div class="property-card-cover">
+              {{if .Photos}}
+                <img src="{{index .Photos 0}}" alt="{{.Title}}" loading="lazy">
+              {{else}}
+                <div class="cover-placeholder">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32" aria-hidden="true">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                </div>
+              {{end}}
+              <div class="property-badge-layer">
+                <span class="badge badge-operation-sub badge-{{.OperationType}}">{{operationLabel .OperationType}}</span>
+              </div>
+            </div>
+
+            <!-- Meta details -->
+            <div class="property-card-info">
+              <div class="property-status-row">
+                <span class="status-indicator status-{{.Status}}">
+                  <span class="status-dot"></span>
+                  {{if eq .Status "active"}}Activo{{else if eq .Status "draft"}}Borrador{{else if eq .Status "under_contract"}}Bajo Contrato{{else if eq .Status "sold"}}Vendido{{else}}{{.Status}}{{end}}
+                </span>
+                <span class="property-views">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  {{.ViewCount}} vistas
+                </span>
+              </div>
+
+              <h3 class="property-card-title">{{.Title}}</h3>
+              <p class="property-card-location">📍 {{.Municipality}}, Oaxaca</p>
+              <div class="property-card-price">{{formatPrice .Price .Currency}}</div>
+
+              <!-- Sleek Flat Action Row -->
+              <div class="property-card-actions">
+                <a href="/propiedades/{{.Slug}}" class="btn btn-outline btn-sm action-btn" target="_blank">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                  </svg>
+                  Ver
+                </a>
+                <a href="/propiedades/{{.Slug}}/editar" class="btn btn-outline btn-sm action-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                  Editar
+                </a>
+              </div>
+            </div>
+          </div>
+        {{end}}
+      </div>
+    {{else}}
+      <!-- Empty State Card -->
+      <div class="empty-state-panel mt-4">
+        <div class="empty-state-icon-wrapper">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" width="48" height="48" aria-hidden="true">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+        </div>
+        <h2>Aún no tienes propiedades publicadas</h2>
+        <p class="text-muted">La plataforma inmobiliaria más clara y transparente de Oaxaca te está esperando. Comienza publicando tu primera propiedad hoy mismo.</p>
+        <a href="/publicar" class="btn btn-primary mt-4">Publicar Propiedad Ahora</a>
+      </div>
+    {{end}}
+  </div>
 </div>
 {{end}}
