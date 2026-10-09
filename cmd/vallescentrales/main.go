@@ -14,6 +14,7 @@ import (
 	"vallescentrales/internal/middleware"
 	"vallescentrales/internal/repo"
 	"vallescentrales/internal/services"
+	"vallescentrales/internal/wizard"
 )
 
 func main() {
@@ -32,15 +33,17 @@ func main() {
 	}
 	defer db.Close()
 
-	// Repos
+	// Repositories
 	userRepo := repo.NewUserRepo(db)
 	sessionRepo := repo.NewSessionRepo(db)
 	listingRepo := repo.NewListingRepo(db)
 	passkeyRepo := repo.NewPasskeyRepo(db)
 
+	// Wizard Engine (shared across all multi-step flows)
+	wizardEngine := wizard.NewEngine(db)
+
 	// Auth
 	sessionMgr := auth.NewSessionManager(sessionRepo, cfg.IsProduction(), cfg.BaseDomain)
-
 
 	googleAuth := auth.NewGoogleOAuth(
 		cfg.GoogleClientID,
@@ -75,22 +78,31 @@ func main() {
 	// Middleware
 	authMW := middleware.NewAuthMiddleware(sessionMgr, userRepo)
 
-		// Templates
+	// Templates
 	tmpl, err := app.NewTemplateRenderer(currencySvc)
 	if err != nil {
 		slog.Error("failed to parse templates", "error", err)
 		os.Exit(1)
 	}
 
-	// Handlers
+	// Handlers (with exact production-matching arguments)
 	authH := handlers.NewAuthHandler(userRepo, sessionMgr, googleAuth, tmpl, cfg.IsProduction())
 	listingH := handlers.NewListingHandler(listingRepo, userRepo, tmpl)
 	profileH := handlers.NewProfileHandler(userRepo, passkeyRepo, listingRepo, tmpl)
 	passkeyH := handlers.NewPasskeyHandler(webAuthn, passkeyRepo, userRepo, sessionMgr)
 	uploadH := handlers.NewUploadHandler(storageSvc, listingRepo, userRepo)
 
+	// Wizard Handlers
+	accountWizardH := handlers.NewWizardAccountHandler(wizardEngine, userRepo, tmpl)
+	propertyWizardH := handlers.NewWizardPropertyHandler(wizardEngine, listingRepo, tmpl, storageSvc)
+
 	// Server
-	server, err := app.NewServer(cfg, db, authMW, authH, listingH, profileH, passkeyH, uploadH, tmpl)
+	server, err := app.NewServer(cfg, db, authMW, authH, listingH, profileH, passkeyH, uploadH, accountWizardH, propertyWizardH, tmpl)
+	if err != nil {
+		slog.Error("failed to initialize server", "error", err)
+		os.Exit(1)
+	}
+
 	if err := server.Start(); err != nil {
 		slog.Error("server stopped with error", "error", err)
 		os.Exit(1)

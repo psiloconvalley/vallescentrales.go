@@ -1,0 +1,88 @@
+{{template "partials/nav.tmpl" .}}
+
+<main class="wizard-page">
+    <div class="wizard-container">
+
+        <nav class="wizard-progress" aria-label="Progreso">
+            <ol class="wizard-steps">
+                {{range $step := .Steps}}
+                <li class="wizard-step-item{{if eq $step.Number $.Session.CurrentStep}} is-current{{end}}{{if lt $step.Number $.Session.CurrentStep}} is-complete{{end}}">
+                    <span class="wizard-step-number">{{$step.Number}}</span>
+                    <span class="wizard-step-label">{{$step.Title}}</span>
+                </li>
+                {{end}}
+            </ol>
+            <div class="wizard-progress-bar">
+                <div class="wizard-progress-fill" data-progress="{{.Session.Progress}}"></div>
+            </div>
+        </nav>
+
+        {{if .Error}}
+        <div class="wizard-alert wizard-alert-error" role="alert">
+            <span class="wizard-alert-icon">⚠️</span>
+            <span class="wizard-alert-text">{{.Error}}</span>
+        </div>
+        {{end}}
+
+        <div class="wizard-autosave" data-wizard-autosave>
+            <span class="wizard-autosave-dot"></span>
+            <span class="wizard-autosave-text">Borrador guardado</span>
+        </div>
+
+        <h1 class="wizard-step-heading">¿Cómo te contactan?</h1>
+        <p class="wizard-step-description">Tú decides qué información es visible en tus anuncios. Puedes cambiar esto en cualquier momento desde tu perfil.</p>
+
+        <form method="POST" action="/bienvenido/paso/2" data-wizard-form data-autosave-url="/bienvenido/draft">
+
+            <div class="wizard-field">
+                <label class="wizard-label" for="phone">Teléfono</label>
+                <input class="wizard-input" type="tel" id="phone" name="phone"
+                       value="{{index .Data "phone"}}"
+                       placeholder="Ej. 951 123 4567">
+            </div>
+
+            <div class="wizard-field">
+                <label class="wizard-label" for="whatsapp">WhatsApp</label>
+                <input class="wizard-input" type="tel" id="whatsapp" name="whatsapp"
+                       value="{{index .Data "whatsapp"}}"
+                       placeholder="Ej. 52 951 123 4567 (con código de país)">
+                <span class="wizard-help">Incluye el código de país (52 para México) sin el signo +.</span>
+            </div>
+
+            <div class="wizard-field">
+                <label class="wizard-label">Privacidad de contacto</label>
+                <label class="wizard-checkbox-row">
+                    <input type="checkbox" name="show_phone" value="true"
+                           {{if eq (index .Data "show_phone") "true"}}checked{{end}}>
+                    <span>Mostrar mi teléfono en mis anuncios públicos</span>
+                </label>
+                <label class="wizard-checkbox-row">
+                    <input type="checkbox" name="show_whatsapp" value="true"
+                           {{if eq (index .Data "show_whatsapp") "true"}}checked{{end}}>
+                    <span>Mostrar mi botón de WhatsApp en mis anuncios</span>
+                </label>
+                <span class="wizard-help">Si no marcas ninguna opción, los interesados deberán iniciar sesión para contactarte.</span>
+            </div>
+
+            <div class="wizard-field">
+                <label class="wizard-label" for="municipality">¿Dónde vives?</label>
+                <select class="wizard-select" id="municipality" name="municipality">
+                    <option value="">Selecciona tu municipio…</option>
+                    {{range .Municipalities}}
+                    <option value="{{.}}" {{if eq . (index $.Data "municipality")}}selected{{end}}>{{.}}</option>
+                    {{end}}
+                </select>
+                <span class="wizard-help">Nos ayuda a mostrarte propiedades y servicios cercanos.</span>
+            </div>
+
+            <div class="wizard-nav">
+                <a href="/bienvenido/paso/1" class="wizard-btn wizard-btn-secondary">← Atrás</a>
+                <button type="submit" class="wizard-btn wizard-btn-primary">Completar configuración ✓</button>
+            </div>
+        </form>
+
+    </div>
+</main>
+
+<script src="/static/js/wizard.js" defer></script>
+{{template "partials/footer.tmpl" .}}

@@ -1,0 +1,73 @@
+{{define "wizard/base"}}
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Asistente de Configuración — Valles Centrales">
+    <meta name="csrf-token" content="{{.CSRFToken}}">
+    <title>{{if .Title}}{{.Title}} — {{end}}Valles Centrales</title>
+
+    <!-- Global & Domain Stylesheets (Absolute Paths) -->
+    <link rel="stylesheet" href="/static/css/fonts.css?v={{.AssetVersion}}">
+    <link rel="stylesheet" href="/static/css/reset.css?v={{.AssetVersion}}">
+    <link rel="stylesheet" href="/static/css/tokens.css?v={{.AssetVersion}}">
+    <link rel="stylesheet" href="/static/css/layout.css?v={{.AssetVersion}}">
+    <link rel="stylesheet" href="/static/css/components.css?v={{.AssetVersion}}">
+    <link rel="stylesheet" href="/static/css/wizard.css?v={{.AssetVersion}}">
+    <link rel="stylesheet" href="/static/css/utilities.css?v={{.AssetVersion}}">
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏔</text></svg>">
+</head>
+<body class="wizard-body-wrapper">
+
+    {{template "nav" .}}
+
+    <main class="wizard-page">
+        <div class="wizard-container">
+
+            <!-- Progress Bar -->
+            <nav class="wizard-progress" aria-label="Progreso del asistente">
+                <ol class="wizard-steps">
+                    {{range $i, $step := .Steps}}
+                    <li class="wizard-step-item{{if eq $step.Number $.Session.CurrentStep}} is-current{{end}}{{if lt $step.Number $.Session.CurrentStep}} is-complete{{end}}">
+                        <span class="wizard-step-number">{{$step.Number}}</span>
+                        <span class="wizard-step-label">{{$step.Title}}</span>
+                    </li>
+                    {{end}}
+                </ol>
+                <div class="wizard-progress-bar" role="progressbar" aria-valuenow="{{.Session.Progress}}" aria-valuemin="0" aria-valuemax="100">
+                    <div class="wizard-progress-fill" data-progress="{{.Session.Progress}}"></div>
+                </div>
+            </nav>
+
+            <!-- Error Banner -->
+            {{if .Error}}
+            <div class="wizard-alert wizard-alert-error" role="alert">
+                <span class="wizard-alert-icon">⚠️</span>
+                <span class="wizard-alert-text">{{.Error}}</span>
+            </div>
+            {{end}}
+
+            <!-- Autosave Indicator -->
+            <div class="wizard-autosave" aria-live="polite" data-wizard-autosave>
+                <span class="wizard-autosave-dot"></span>
+                <span class="wizard-autosave-text">Borrador guardado automáticamente</span>
+            </div>
+
+            <!-- Step Content (injected by child templates) -->
+            <div class="wizard-step-content">
+                {{template "wizard-step" .}}
+            </div>
+
+        </div>
+    </main>
+
+    {{template "footer" .}}
+
+    <!-- Scripts -->
+    <script src="/static/js/nav.js?v={{.AssetVersion}}" defer></script>
+    <script src="/static/js/wizard.js?v={{.AssetVersion}}" defer></script>
+</body>
+</html>
+{{end}}

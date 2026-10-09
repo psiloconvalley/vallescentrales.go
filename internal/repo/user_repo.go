@@ -39,7 +39,8 @@ const userColumns = `
 	id, email, password_hash, full_name, phone, whatsapp,
 	role, is_verified, google_id, auth_provider, created_at, updated_at,
 	username, display_name, bio, avatar_url, website, location,
-	agency_name, languages, show_phone, show_whatsapp, notify_email, preferred_lang`
+	agency_name, languages, show_phone, show_whatsapp, notify_email, preferred_lang,
+	user_type, municipality, onboarding_completed`
 
 // scanUser scans a row into a User struct.
 // Column order must match userColumns exactly.
@@ -70,6 +71,9 @@ func scanUser(row pgx.Row) (*models.User, error) {
 		&user.ShowWhatsApp,
 		&user.NotifyEmail,
 		&user.PreferredLang,
+		&user.UserType,
+		&user.Municipality,
+		&user.OnboardingCompleted,
 	)
 	return user, err
 }
@@ -93,7 +97,6 @@ func (r *UserRepo) Create(ctx context.Context, email, passwordHash, fullName str
 }
 
 // CreateGoogle inserts a new Google-registered user.
-// Sets avatar_url from Google profile picture if provided.
 func (r *UserRepo) CreateGoogle(ctx context.Context, email, fullName, googleID string) (*models.User, error) {
 	query := fmt.Sprintf(`
 		INSERT INTO users (email, full_name, google_id, auth_provider, is_verified)
@@ -175,7 +178,6 @@ func (r *UserRepo) GetByGoogleID(ctx context.Context, googleID string) (*models.
 }
 
 // GetByUsername fetches a user by their public username.
-// Used for public profile pages /profile/{username}.
 func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*models.User, error) {
 	query := fmt.Sprintf(`SELECT %s FROM users WHERE username = $1`, userColumns)
 
@@ -278,6 +280,44 @@ func (r *UserRepo) UpdateProfile(ctx context.Context, id uuid.UUID, input Update
 	return user, nil
 }
 
+// UpdateOnboarding saves onboarding wizard choices specifically.
+func (r *UserRepo) UpdateOnboarding(ctx context.Context, id uuid.UUID, fullName, userType string, phone, whatsapp, municipality, bio *string, showPhone, showWhatsApp bool) (*models.User, error) {
+	query := fmt.Sprintf(`
+		UPDATE users
+		SET full_name = $2,
+		    user_type = $3,
+		    phone = $4,
+		    whatsapp = $5,
+		    municipality = $6,
+		    bio = $7,
+		    show_phone = $8,
+		    show_whatsapp = $9,
+		    onboarding_completed = TRUE,
+		    updated_at = NOW()
+		WHERE id = $1
+		RETURNING %s`, userColumns)
+
+	user, err := scanUser(r.db.QueryRow(ctx, query,
+		id,
+		fullName,
+		userType,
+		phone,
+		whatsapp,
+		municipality,
+		bio,
+		showPhone,
+		showWhatsApp,
+	))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("user_repo.UpdateOnboarding: %w", err)
+	}
+
+	return user, nil
+}
+
 // UpdateAvatar updates the user's avatar URL.
 func (r *UserRepo) UpdateAvatar(ctx context.Context, id uuid.UUID, avatarURL string) (*models.User, error) {
 	query := fmt.Sprintf(`
@@ -297,14 +337,12 @@ func (r *UserRepo) UpdateAvatar(ctx context.Context, id uuid.UUID, avatarURL str
 	return user, nil
 }
 
-// isUniqueViolation returns true if the error is a PostgreSQL
-// unique constraint violation (error code 23505).
+// isUniqueViolation returns true if the error is a PostgreSQL unique constraint violation.
 func isUniqueViolation(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "23505")
 }
 
 // UpdatePassword changes a user's password hash.
-// password_hash must already be an Argon2id hash.
 func (r *UserRepo) UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error {
 	query := `UPDATE users SET password_hash = $2 WHERE id = $1`
 

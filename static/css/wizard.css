@@ -1,0 +1,459 @@
+/* ============================================================================
+   Wizard System — Shared styles for all guided flows
+   ============================================================================ */
+
+.wizard-page {
+    min-height: calc(100vh - 160px);
+    padding: 48px 24px 96px;
+    background: var(--bg);
+}
+
+.wizard-container {
+    max-width: 760px;
+    margin: 0 auto;
+    background: var(--surface);
+    border: 1px solid rgba(26, 36, 33, 0.08);
+    border-radius: 16px;
+    padding: 40px 48px;
+    box-shadow: 0 1px 3px rgba(26, 36, 33, 0.04);
+}
+
+/* --- Progress Bar --- */
+.wizard-progress {
+    margin-bottom: 40px;
+}
+
+.wizard-steps {
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    padding: 0;
+    margin: 0 0 16px;
+    gap: 12px;
+}
+
+.wizard-step-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: rgba(26, 36, 33, 0.4);
+    transition: color 180ms ease;
+}
+
+.wizard-step-item.is-current,
+.wizard-step-item.is-complete {
+    color: var(--obsidian);
+}
+
+.wizard-step-number {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(26, 36, 33, 0.08);
+    color: inherit;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background 180ms ease, color 180ms ease;
+}
+
+.wizard-step-item.is-current .wizard-step-number {
+    background: var(--obsidian);
+    color: #fff;
+}
+
+.wizard-step-item.is-complete .wizard-step-number {
+    background: var(--obsidian-green);
+    color: #fff;
+}
+
+.wizard-step-label {
+    font-size: 13px;
+    font-weight: 500;
+    text-align: center;
+}
+
+.wizard-progress-bar {
+    height: 4px;
+    background: rgba(26, 36, 33, 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.wizard-progress-fill {
+    height: 100%;
+    background: var(--obsidian-green);
+    transition: width 320ms ease;
+    width: 0;
+}
+
+.wizard-progress-fill[data-progress="33"]  { width: 33%; }
+.wizard-progress-fill[data-progress="50"]  { width: 50%; }
+.wizard-progress-fill[data-progress="66"]  { width: 66%; }
+.wizard-progress-fill[data-progress="100"] { width: 100%; }
+
+/* --- Alerts --- */
+.wizard-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.wizard-alert-error {
+    background: #FEF2F2;
+    color: #991B1B;
+    border: 1px solid #FCA5A5;
+}
+
+.wizard-alert-icon { font-size: 16px; }
+
+/* --- Autosave Indicator --- */
+.wizard-autosave {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: rgba(26, 36, 33, 0.5);
+    margin-bottom: 24px;
+    opacity: 0;
+    transition: opacity 240ms ease;
+}
+
+.wizard-autosave.is-visible { opacity: 1; }
+
+.wizard-autosave-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--obsidian-green);
+}
+
+/* --- Step Content --- */
+.wizard-step-content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.wizard-step-heading {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--obsidian);
+    margin: 0 0 8px;
+    letter-spacing: -0.02em;
+}
+
+.wizard-step-description {
+    font-size: 15px;
+    color: rgba(26, 36, 33, 0.65);
+    margin: 0 0 24px;
+    line-height: 1.6;
+}
+
+/* --- Form Fields --- */
+.wizard-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.wizard-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--obsidian);
+}
+
+.wizard-input,
+.wizard-select,
+.wizard-textarea {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--obsidian);
+    background: #fff;
+    border: 1px solid rgba(26, 36, 33, 0.15);
+    border-radius: 10px;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.wizard-input:focus,
+.wizard-select:focus,
+.wizard-textarea:focus {
+    outline: none;
+    border-color: var(--obsidian-green);
+    box-shadow: 0 0 0 3px rgba(47, 79, 58, 0.1);
+}
+
+.wizard-textarea {
+    min-height: 140px;
+    resize: vertical;
+}
+
+.wizard-help {
+    font-size: 12px;
+    color: rgba(26, 36, 33, 0.5);
+}
+
+/* --- Choice Grid (for type selectors) --- */
+.wizard-choice-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+}
+
+.wizard-choice-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 16px;
+    background: #fff;
+    border: 2px solid rgba(26, 36, 33, 0.1);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+    text-align: center;
+}
+
+.wizard-choice-card:hover {
+    border-color: var(--obsidian-green);
+    background: rgba(47, 79, 58, 0.02);
+}
+
+.wizard-choice-card input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.wizard-choice-card input[type="radio"]:checked + .wizard-choice-icon ~ .wizard-choice-label,
+.wizard-choice-card:has(input[type="radio"]:checked) {
+    border-color: var(--obsidian-green);
+    background: rgba(47, 79, 58, 0.05);
+}
+
+.wizard-choice-icon {
+    font-size: 32px;
+    line-height: 1;
+}
+
+.wizard-choice-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--obsidian);
+}
+
+/* --- Navigation Buttons --- */
+.wizard-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(26, 36, 33, 0.08);
+}
+
+.wizard-nav-spacer { flex: 1; }
+
+.wizard-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 500;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease, transform 60ms ease;
+    text-decoration: none;
+}
+
+.wizard-btn:active { transform: translateY(1px); }
+
+.wizard-btn-primary {
+    background: var(--obsidian);
+    color: #fff;
+}
+.wizard-btn-primary:hover { background: var(--obsidian-green); }
+
+.wizard-btn-secondary {
+    background: #fff;
+    color: var(--obsidian);
+    border-color: rgba(26, 36, 33, 0.15);
+}
+.wizard-btn-secondary:hover { background: rgba(26, 36, 33, 0.04); }
+
+/* --- Mobile --- */
+@media (max-width: 640px) {
+    .wizard-container { padding: 24px 20px; border-radius: 12px; }
+    .wizard-step-label { font-size: 11px; }
+    .wizard-step-heading { font-size: 22px; }
+    .wizard-nav { flex-direction: column-reverse; }
+    .wizard-btn { width: 100%; }
+}
+/* --- Photo Dropzone --- */
+.wizard-dropzone {
+    position: relative;
+    border: 2px dashed rgba(26, 36, 33, 0.2);
+    border-radius: 12px;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+}
+
+.wizard-dropzone:hover,
+.wizard-dropzone.is-dragging {
+    border-color: var(--obsidian-green);
+    background: rgba(47, 79, 58, 0.03);
+}
+
+.wizard-dropzone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.wizard-dropzone-icon { font-size: 40px; }
+.wizard-dropzone-title { font-size: 16px; font-weight: 500; color: var(--obsidian); }
+.wizard-dropzone-subtitle { font-size: 14px; color: rgba(26, 36, 33, 0.6); }
+.wizard-dropzone-hint { font-size: 12px; color: rgba(26, 36, 33, 0.4); margin-top: 4px; }
+
+.wizard-dropzone-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* --- Preview Grid --- */
+.wizard-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.wizard-preview-card {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 2px solid rgba(26, 36, 33, 0.1);
+    cursor: grab;
+    transition: border-color 160ms ease, transform 120ms ease;
+}
+
+.wizard-preview-card.is-primary {
+    border-color: var(--obsidian-green);
+    border-width: 3px;
+}
+
+.wizard-preview-card.is-dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+}
+
+.wizard-preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.wizard-preview-badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+.wizard-preview-card.is-primary .wizard-preview-badge {
+    background: var(--obsidian-green);
+}
+
+.wizard-preview-actions {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.5));
+    opacity: 0;
+    transition: opacity 160ms ease;
+}
+
+.wizard-preview-card:hover .wizard-preview-actions { opacity: 1; }
+
+.wizard-preview-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--obsidian);
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wizard-preview-btn-remove { color: #DC2626; }
+
+/* --- Price Row --- */
+.wizard-price-row {
+    display: flex;
+    gap: 8px;
+}
+
+.wizard-price-row .wizard-input { flex: 1; }
+.wizard-currency-select { width: 110px; flex-shrink: 0; }
+
+/* --- Dimensions Grid --- */
+.wizard-dimensions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+/* --- Checkbox Row --- */
+.wizard-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    font-size: 14px;
+    color: var(--obsidian);
+    cursor: pointer;
+}
+
+.wizard-checkbox-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--obsidian-green);
+}
+/* Wizard layout helper margin */
+.wizard-help-legal {
+    margin-bottom: var(--s3); /* Uses 12px token */
+}

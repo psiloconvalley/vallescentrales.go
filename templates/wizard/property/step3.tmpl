@@ -1,0 +1,60 @@
+{{template "partials/nav.tmpl" .}}
+
+<main class="wizard-page">
+    <div class="wizard-container">
+
+        <nav class="wizard-progress" aria-label="Progreso">
+            <ol class="wizard-steps">
+                {{range $step := .Steps}}
+                <li class="wizard-step-item{{if eq $step.Number $.Session.CurrentStep}} is-current{{end}}{{if lt $step.Number $.Session.CurrentStep}} is-complete{{end}}">
+                    <span class="wizard-step-number">{{$step.Number}}</span>
+                    <span class="wizard-step-label">{{$step.Title}}</span>
+                </li>
+                {{end}}
+            </ol>
+            <div class="wizard-progress-bar">
+                <div class="wizard-progress-fill" data-progress="100"></div>
+            </div>
+        </nav>
+
+        {{if .Error}}
+        <div class="wizard-alert wizard-alert-error" role="alert">
+            <span class="wizard-alert-icon">⚠️</span>
+            <span class="wizard-alert-text">{{.Error}}</span>
+        </div>
+        {{end}}
+
+        <h1 class="wizard-step-heading">Agrega fotografías</h1>
+        <p class="wizard-step-description">Las propiedades con buenas fotos reciben 10 veces más consultas. Sube hasta 10 imágenes y arrastra para reordenar. La primera será tu foto principal.</p>
+
+        <form method="POST" action="/publicar/finalizar" enctype="multipart/form-data" data-wizard-form>
+
+            <div class="wizard-dropzone" data-dropzone>
+                <div class="wizard-dropzone-content">
+                    <span class="wizard-dropzone-icon">📷</span>
+                    <span class="wizard-dropzone-title">Arrastra tus fotos aquí</span>
+                    <span class="wizard-dropzone-subtitle">o haz clic para seleccionar archivos</span>
+                    <span class="wizard-dropzone-hint">JPG, PNG o WebP · Máximo 10 MB cada una · Hasta 10 fotos</span>
+                </div>
+                <input type="file" id="images" name="images" class="wizard-dropzone-input"
+                       accept="image/jpeg,image/png,image/webp" multiple required>
+            </div>
+
+            <div class="wizard-preview-grid" data-preview-grid>
+                <!-- Thumbnails injected by wizard-photos.js -->
+            </div>
+
+            <div class="wizard-nav">
+                <a href="/publicar/paso/2" class="wizard-btn wizard-btn-secondary">← Atrás</a>
+                <button type="submit" class="wizard-btn wizard-btn-primary" data-publish-btn>
+                    🚀 Publicar propiedad
+                </button>
+            </div>
+        </form>
+
+    </div>
+</main>
+
+<script src="/static/js/wizard.js" defer></script>
+<script src="/static/js/wizard-photos.js" defer></script>
+{{template "partials/footer.tmpl" .}}

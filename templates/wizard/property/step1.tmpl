@@ -1,0 +1,135 @@
+{{template "partials/nav.tmpl" .}}
+
+<main class="wizard-page">
+    <div class="wizard-container">
+
+        <nav class="wizard-progress" aria-label="Progreso">
+            <ol class="wizard-steps">
+                {{range $step := .Steps}}
+                <li class="wizard-step-item{{if eq $step.Number $.Session.CurrentStep}} is-current{{end}}{{if lt $step.Number $.Session.CurrentStep}} is-complete{{end}}">
+                    <span class="wizard-step-number">{{$step.Number}}</span>
+                    <span class="wizard-step-label">{{$step.Title}}</span>
+                </li>
+                {{end}}
+            </ol>
+            <div class="wizard-progress-bar">
+                <div class="wizard-progress-fill" data-progress="{{.Session.Progress}}"></div>
+            </div>
+        </nav>
+
+        {{if .Error}}
+        <div class="wizard-alert wizard-alert-error" role="alert">
+            <span class="wizard-alert-icon">⚠️</span>
+            <span class="wizard-alert-text">{{.Error}}</span>
+        </div>
+        {{end}}
+
+        <div class="wizard-autosave" data-wizard-autosave>
+            <span class="wizard-autosave-dot"></span>
+            <span class="wizard-autosave-text">Borrador guardado</span>
+        </div>
+
+        <h1 class="wizard-step-heading">¿Qué quieres publicar?</h1>
+        <p class="wizard-step-description">Selecciona el tipo de operación, inmueble y régimen jurídico de tu propiedad.</p>
+
+        <form method="POST" action="/publicar/paso/1" data-wizard-form data-autosave-url="/publicar/draft">
+
+            <div class="wizard-field">
+                <label class="wizard-label">Tipo de operación *</label>
+                <div class="wizard-choice-grid">
+                    <label class="wizard-choice-card">
+                        <input type="radio" name="operation_type" value="sale"
+                               {{if eq (index .Data "operation_type") "sale"}}checked{{end}}
+                               {{if not (index .Data "operation_type")}}checked{{end}}>
+                        <span class="wizard-choice-icon">🏷️</span>
+                        <span class="wizard-choice-label">Vender</span>
+                    </label>
+                    <label class="wizard-choice-card">
+                        <input type="radio" name="operation_type" value="rent"
+                               {{if eq (index .Data "operation_type") "rent"}}checked{{end}}>
+                        <span class="wizard-choice-icon">🔑</span>
+                        <span class="wizard-choice-label">Rentar</span>
+                    </label>
+                    <label class="wizard-choice-card">
+                        <input type="radio" name="operation_type" value="temporary_rental"
+                               {{if eq (index .Data "operation_type") "temporary_rental"}}checked{{end}}>
+                        <span class="wizard-choice-icon">📅</span>
+                        <span class="wizard-choice-label">Renta Temporal</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="wizard-field">
+                <label class="wizard-label">Tipo de inmueble *</label>
+                <div class="wizard-choice-grid">
+                    <label class="wizard-choice-card">
+                        <input type="radio" name="property_type" value="house"
+                               {{if eq (index .Data "property_type") "house"}}checked{{end}}
+                               {{if not (index .Data "property_type")}}checked{{end}}>
+                        <span class="wizard-choice-icon">🏡</span>
+                        <span class="wizard-choice-label">Casa</span>
+                    </label>
+                    <label class="wizard-choice-card">
+                        <input type="radio" name="property_type" value="apartment"
+                               {{if eq (index .Data "property_type") "apartment"}}checked{{end}}>
+                        <span class="wizard-choice-icon">🏢</span>
+                        <span class="wizard-choice-label">Departamento</span>
+                    </label>
+                    <label class="wizard-choice-card">
+                        <input type="radio" name="property_type" value="land"
+                               {{if eq (index .Data "property_type") "land"}}checked{{end}}>
+                        <span class="wizard-choice-icon">🌳</span>
+                        <span class="wizard-choice-label">Terreno</span>
+                    </label>
+                    <label class="wizard-choice-card">
+                        <input type="radio" name="property_type" value="commercial"
+                               {{if eq (index .Data "property_type") "commercial"}}checked{{end}}>
+                        <span class="wizard-choice-icon">🏪</span>
+                        <span class="wizard-choice-label">Comercial</span>
+                    </label>
+                    <label class="wizard-choice-card">
+                        <input type="radio" name="property_type" value="office"
+                               {{if eq (index .Data "property_type") "office"}}checked{{end}}>
+                        <span class="wizard-choice-icon">💼</span>
+                        <span class="wizard-choice-label">Oficina</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="wizard-field">
+                <label class="wizard-label">Régimen jurídico *</label>
+		<p class="wizard-help wizard-help-legal">La certeza jurídica es fundamental en Oaxaca. Selecciona el régimen que aplica a tu propiedad.</p>
+                <div class="wizard-choice-grid">
+                    <label class="wizard-choice-card">
+                        <input type="radio" name="legal_regime" value="escritura_publica"
+                               {{if eq (index .Data "legal_regime") "escritura_publica"}}checked{{end}}
+                               {{if not (index .Data "legal_regime")}}checked{{end}}>
+                        <span class="wizard-choice-icon">📜</span>
+                        <span class="wizard-choice-label">Escritura Pública</span>
+                    </label>
+                    <label class="wizard-choice-card">
+                        <input type="radio" name="legal_regime" value="comunal"
+                               {{if eq (index .Data "legal_regime") "comunal"}}checked{{end}}>
+                        <span class="wizard-choice-icon">🤝</span>
+                        <span class="wizard-choice-label">Comunal</span>
+                    </label>
+                    <label class="wizard-choice-card">
+                        <input type="radio" name="legal_regime" value="ejidal"
+                               {{if eq (index .Data "legal_regime") "ejidal"}}checked{{end}}>
+                        <span class="wizard-choice-icon">🌾</span>
+                        <span class="wizard-choice-label">Ejidal</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="wizard-nav">
+                <a href="/cuenta" class="wizard-btn wizard-btn-secondary">Cancelar</a>
+                <button type="submit" class="wizard-btn wizard-btn-primary">Continuar →</button>
+            </div>
+        </form>
+
+    </div>
+</main>
+
+<script src="/static/js/wizard.js" defer></script>
+{{template "partials/footer.tmpl" .}}

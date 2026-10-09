@@ -1,498 +1,512 @@
-// internal/repo/listing_repo.go
-// All SQL for the listings and listing_media tables.
-// Rule 42: repo = SQL only. No business logic. No HTTP.
-// Rule 8:  Always parameterized queries. Never string interpolation.
-// Rule 9:  Column names verified against live schema 2026-06-20.
-
 package repo
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"vallescentrales/internal/models"
+	"vallescentrales/internal/slug"
 )
 
-// ListingRepo handles all database operations for listings and listing_media.
-type ListingRepo struct {
-	db *pgxpool.Pool
-}
-
-// NewListingRepo creates a new ListingRepo.
-func NewListingRepo(db *pgxpool.Pool) *ListingRepo {
-	return &ListingRepo{db: db}
-}
-
-// CreateInput holds the fields required to insert a new listing.
-type CreateInput struct {
-	OwnerID      uuid.UUID
-	Title        string
-	Slug         string
-	PropertyType models.PropertyType
-	PriceMXN     float64
-	Municipality string
-}
-
-// Create inserts a new listing in draft status.
-// Slug must be generated and verified unique before calling this.
-func (r *ListingRepo) Create(ctx context.Context, input CreateInput) (*models.Listing, error) {
-	query := `
-		INSERT INTO listings (owner_id, title, slug, property_type, price_mxn, municipality)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, owner_id, title, slug, description, property_type, status,
-		          price_mxn, area_m2, construction_m2, municipality, community,
-		          latitude, longitude, is_featured, view_count,
-		          created_at, updated_at, published_at`
-
-	listing := &models.Listing{}
-	err := r.db.QueryRow(ctx, query,
-		input.OwnerID,
-		input.Title,
-		input.Slug,
-		input.PropertyType,
-		input.PriceMXN,
-		input.Municipality,
-	).Scan(
-		&listing.ID,
-		&listing.OwnerID,
-		&listing.Title,
-		&listing.Slug,
-		&listing.Description,
-		&listing.PropertyType,
-		&listing.Status,
-		&listing.PriceMXN,
-		&listing.AreaM2,
-		&listing.ConstructionM2,
-		&listing.Municipality,
-		&listing.Community,
-		&listing.Latitude,
-		&listing.Longitude,
-		&listing.IsFeatured,
-		&listing.ViewCount,
-		&listing.CreatedAt,
-		&listing.UpdatedAt,
-		&listing.PublishedAt,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("listing_repo.Create: %w", err)
-	}
-
-	return listing, nil
-}
-
-// GetByID fetches a single listing by primary key.
-func (r *ListingRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.Listing, error) {
-	query := `
-		SELECT id, owner_id, title, slug, description, property_type, status,
-		       price_mxn, area_m2, construction_m2, municipality, community,
-		       latitude, longitude, is_featured, view_count,
-		       created_at, updated_at, published_at
-		FROM listings
-		WHERE id = $1`
-
-	listing := &models.Listing{}
-	err := r.db.QueryRow(ctx, query, id).Scan(
-		&listing.ID,
-		&listing.OwnerID,
-		&listing.Title,
-		&listing.Slug,
-		&listing.Description,
-		&listing.PropertyType,
-		&listing.Status,
-		&listing.PriceMXN,
-		&listing.AreaM2,
-		&listing.ConstructionM2,
-		&listing.Municipality,
-		&listing.Community,
-		&listing.Latitude,
-		&listing.Longitude,
-		&listing.IsFeatured,
-		&listing.ViewCount,
-		&listing.CreatedAt,
-		&listing.UpdatedAt,
-		&listing.PublishedAt,
-	)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("listing_repo.GetByID: %w", err)
-	}
-
-	return listing, nil
-}
-
-// GetBySlug fetches a single listing by its URL slug.
-func (r *ListingRepo) GetBySlug(ctx context.Context, slug string) (*models.Listing, error) {
-	query := `
-		SELECT id, owner_id, title, slug, description, property_type, status,
-		       price_mxn, area_m2, construction_m2, municipality, community,
-		       latitude, longitude, is_featured, view_count,
-		       created_at, updated_at, published_at
-		FROM listings
-		WHERE slug = $1`
-
-	listing := &models.Listing{}
-	err := r.db.QueryRow(ctx, query, slug).Scan(
-		&listing.ID,
-		&listing.OwnerID,
-		&listing.Title,
-		&listing.Slug,
-		&listing.Description,
-		&listing.PropertyType,
-		&listing.Status,
-		&listing.PriceMXN,
-		&listing.AreaM2,
-		&listing.ConstructionM2,
-		&listing.Municipality,
-		&listing.Community,
-		&listing.Latitude,
-		&listing.Longitude,
-		&listing.IsFeatured,
-		&listing.ViewCount,
-		&listing.CreatedAt,
-		&listing.UpdatedAt,
-		&listing.PublishedAt,
-	)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("listing_repo.GetBySlug: %w", err)
-	}
-
-	return listing, nil
-}
-
-// ListFilter defines the available filters for the public listing browse page.
 type ListFilter struct {
 	Municipality *string
 	PropertyType *models.PropertyType
 	MinPrice     *float64
 	MaxPrice     *float64
+	Status       *models.ListingStatus
+	Featured     *bool
+	OwnerID      *uuid.UUID
 	Page         int
 	PageSize     int
+	SortBy       string
 }
 
-// List returns active listings with optional filters.
-// Only returns listings with status = 'active' — never draft or archived.
-func (r *ListingRepo) List(ctx context.Context, f ListFilter) ([]*models.Listing, int, error) {
-	if f.Page < 1 {
-		f.Page = 1
-	}
-	if f.PageSize < 1 || f.PageSize > 50 {
-		f.PageSize = 20
-	}
-	offset := (f.Page - 1) * f.PageSize
+type CreateInput struct {
+	OwnerID        uuid.UUID
+	Title          string
+	Slug           string
+	Description    *string
+	PropertyType   models.PropertyType
+	PriceMXN       float64
+	AreaM2         *float64
+	ConstructionM2 *float64
+	Municipality   string
+	Community      *string
+	Latitude       *float64
+	Longitude      *float64
+}
 
-	// Count query
-	countQuery := `
-		SELECT COUNT(*)
-		FROM listings
-		WHERE status = 'active'
-		  AND ($1::text IS NULL OR municipality = $1)
-		  AND ($2::text IS NULL OR property_type = $2::property_type)
-		  AND ($3::numeric IS NULL OR price_mxn >= $3)
-		  AND ($4::numeric IS NULL OR price_mxn <= $4)`
+type ListingRepo struct {
+	db *pgxpool.Pool
+}
 
-	var total int
-	err := r.db.QueryRow(ctx, countQuery,
-		f.Municipality,
-		f.PropertyType,
-		f.MinPrice,
-		f.MaxPrice,
-	).Scan(&total)
-	if err != nil {
-		return nil, 0, fmt.Errorf("listing_repo.List count: %w", err)
-	}
+func NewListingRepo(db *pgxpool.Pool) *ListingRepo {
+	return &ListingRepo{db: db}
+}
 
-	if total == 0 {
-		return []*models.Listing{}, 0, nil
-	}
-
-	// Data query
-	dataQuery := `
-		SELECT id, owner_id, title, slug, description, property_type, status,
-		       price_mxn, area_m2, construction_m2, municipality, community,
-		       latitude, longitude, is_featured, view_count,
-		       created_at, updated_at, published_at
-		FROM listings
-		WHERE status = 'active'
-		  AND ($1::text IS NULL OR municipality = $1)
-		  AND ($2::text IS NULL OR property_type = $2::property_type)
-		  AND ($3::numeric IS NULL OR price_mxn >= $3)
-		  AND ($4::numeric IS NULL OR price_mxn <= $4)
-		ORDER BY is_featured DESC, published_at DESC
-		LIMIT $5 OFFSET $6`
-
-	rows, err := r.db.Query(ctx, dataQuery,
-		f.Municipality,
-		f.PropertyType,
-		f.MinPrice,
-		f.MaxPrice,
-		f.PageSize,
-		offset,
+func (r *ListingRepo) Create(ctx context.Context, l *models.Listing) error {
+	query := `
+		INSERT INTO listings (
+			id, owner_id, title, slug, description, property_type, status,
+			price_mxn, area_m2, construction_m2, municipality, community,
+			latitude, longitude, is_featured, view_count, created_at, updated_at, published_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+	`
+	_, err := r.db.Exec(ctx, query,
+		l.ID, l.OwnerID, l.Title, l.Slug, l.Description, l.PropertyType, l.Status,
+		l.PriceMXN, l.AreaM2, l.ConstructionM2, l.Municipality, l.Community,
+		l.Latitude, l.Longitude, l.IsFeatured, l.ViewCount, l.CreatedAt, l.UpdatedAt, l.PublishedAt,
 	)
 	if err != nil {
-		return nil, 0, fmt.Errorf("listing_repo.List query: %w", err)
+		return fmt.Errorf("listing_repo: create: %w", err)
+	}
+	return nil
+}
+
+func (r *ListingRepo) CreateFromInput(ctx context.Context, input CreateInput) (*models.Listing, error) {
+	now := time.Now().UTC()
+	listingSlug := input.Slug
+	if listingSlug == "" {
+		listingSlug = slug.Generate(input.Title)
+	}
+
+	l := &models.Listing{
+		ID:             uuid.New(),
+		OwnerID:        input.OwnerID,
+		Title:          input.Title,
+		Slug:           listingSlug,
+		Description:    input.Description,
+		PropertyType:   input.PropertyType,
+		Status:         models.StatusDraft,
+		PriceMXN:       input.PriceMXN,
+		AreaM2:         input.AreaM2,
+		ConstructionM2: input.ConstructionM2,
+		Municipality:   input.Municipality,
+		Community:      input.Community,
+		Latitude:       input.Latitude,
+		Longitude:      input.Longitude,
+		IsFeatured:     false,
+		ViewCount:      0,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}
+
+	if err := r.Create(ctx, l); err != nil {
+		return nil, err
+	}
+	return l, nil
+}
+
+func (r *ListingRepo) List(ctx context.Context, filter ListFilter) ([]*models.Listing, int, error) {
+	var whereClauses []string
+	var args []interface{}
+	argIdx := 1
+
+	if filter.Status != nil {
+		whereClauses = append(whereClauses, fmt.Sprintf("status = $%d", argIdx))
+		args = append(args, *filter.Status)
+		argIdx++
+	} else {
+		whereClauses = append(whereClauses, fmt.Sprintf("status = $%d", argIdx))
+		args = append(args, models.StatusActive)
+		argIdx++
+	}
+
+	if filter.Municipality != nil && *filter.Municipality != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("municipality = $%d", argIdx))
+		args = append(args, *filter.Municipality)
+		argIdx++
+	}
+
+	if filter.PropertyType != nil && *filter.PropertyType != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("property_type = $%d", argIdx))
+		args = append(args, *filter.PropertyType)
+		argIdx++
+	}
+
+	if filter.MinPrice != nil && *filter.MinPrice > 0 {
+		whereClauses = append(whereClauses, fmt.Sprintf("price_mxn >= $%d", argIdx))
+		args = append(args, *filter.MinPrice)
+		argIdx++
+	}
+
+	if filter.MaxPrice != nil && *filter.MaxPrice > 0 {
+		whereClauses = append(whereClauses, fmt.Sprintf("price_mxn <= $%d", argIdx))
+		args = append(args, *filter.MaxPrice)
+		argIdx++
+	}
+
+	if filter.OwnerID != nil {
+		whereClauses = append(whereClauses, fmt.Sprintf("owner_id = $%d", argIdx))
+		args = append(args, *filter.OwnerID)
+		argIdx++
+	}
+
+	if filter.Featured != nil && *filter.Featured {
+		whereClauses = append(whereClauses, fmt.Sprintf("is_featured = $%d", argIdx))
+		args = append(args, true)
+		argIdx++
+	}
+
+	whereSQL := ""
+	if len(whereClauses) > 0 {
+		whereSQL = "WHERE " + strings.Join(whereClauses, " AND ")
+	}
+
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM listings %s", whereSQL)
+	var total int
+	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("listing_repo: count list: %w", err)
+	}
+
+	orderSQL := "ORDER BY is_featured DESC, created_at DESC"
+	switch filter.SortBy {
+	case "price_asc":
+		orderSQL = "ORDER BY price_mxn ASC, created_at DESC"
+	case "price_desc":
+		orderSQL = "ORDER BY price_mxn DESC, created_at DESC"
+	case "recent":
+		orderSQL = "ORDER BY created_at DESC"
+	}
+
+	limit := filter.PageSize
+	if limit <= 0 {
+		limit = 20
+	}
+	page := filter.Page
+	if page <= 0 {
+		page = 1
+	}
+	offset := (page - 1) * limit
+
+	query := fmt.Sprintf(`
+		SELECT id, owner_id, title, slug, description, property_type, status,
+		       price_mxn, area_m2, construction_m2, municipality, community,
+		       latitude, longitude, is_featured, view_count, created_at, updated_at, published_at
+		FROM listings
+		%s
+		%s
+		LIMIT $%d OFFSET $%d
+	`, whereSQL, orderSQL, argIdx, argIdx+1)
+
+	args = append(args, limit, offset)
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("listing_repo: list query: %w", err)
 	}
 	defer rows.Close()
 
-	listings := make([]*models.Listing, 0)
+	var listings []*models.Listing
 	for rows.Next() {
-		listing := &models.Listing{}
+		var l models.Listing
 		err := rows.Scan(
-			&listing.ID,
-			&listing.OwnerID,
-			&listing.Title,
-			&listing.Slug,
-			&listing.Description,
-			&listing.PropertyType,
-			&listing.Status,
-			&listing.PriceMXN,
-			&listing.AreaM2,
-			&listing.ConstructionM2,
-			&listing.Municipality,
-			&listing.Community,
-			&listing.Latitude,
-			&listing.Longitude,
-			&listing.IsFeatured,
-			&listing.ViewCount,
-			&listing.CreatedAt,
-			&listing.UpdatedAt,
-			&listing.PublishedAt,
+			&l.ID, &l.OwnerID, &l.Title, &l.Slug, &l.Description, &l.PropertyType, &l.Status,
+			&l.PriceMXN, &l.AreaM2, &l.ConstructionM2, &l.Municipality, &l.Community,
+			&l.Latitude, &l.Longitude, &l.IsFeatured, &l.ViewCount, &l.CreatedAt, &l.UpdatedAt, &l.PublishedAt,
 		)
 		if err != nil {
-			return nil, 0, fmt.Errorf("listing_repo.List scan: %w", err)
+			return nil, 0, fmt.Errorf("listing_repo: scan list: %w", err)
 		}
-		listings = append(listings, listing)
+
+		images, err := r.GetMedia(ctx, l.ID)
+		if err == nil {
+			l.Media = images
+		}
+
+		listings = append(listings, &l)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, 0, fmt.Errorf("listing_repo.List rows: %w", err)
-	}
-
-	return listings, total, nil
+	return listings, total, rows.Err()
 }
 
-// ListByOwner returns all listings for a specific owner (dashboard view).
-// Returns all statuses — owner sees their drafts and archived listings too.
+func (r *ListingRepo) Update(ctx context.Context, l *models.Listing) error {
+	l.UpdatedAt = time.Now().UTC()
+	query := `
+		UPDATE listings SET
+			title = $1, slug = $2, description = $3, property_type = $4,
+			status = $5, price_mxn = $6, area_m2 = $7, construction_m2 = $8,
+			municipality = $9, community = $10, latitude = $11, longitude = $12,
+			is_featured = $13, updated_at = $14, published_at = $15
+		WHERE id = $16
+	`
+	_, err := r.db.Exec(ctx, query,
+		l.Title, l.Slug, l.Description, l.PropertyType, l.Status, l.PriceMXN,
+		l.AreaM2, l.ConstructionM2, l.Municipality, l.Community, l.Latitude, l.Longitude,
+		l.IsFeatured, l.UpdatedAt, l.PublishedAt, l.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("listing_repo: update: %w", err)
+	}
+	return nil
+}
+
+func (r *ListingRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.Listing, error) {
+	query := `
+		SELECT id, owner_id, title, slug, description, property_type, status,
+		       price_mxn, area_m2, construction_m2, municipality, community,
+		       latitude, longitude, is_featured, view_count, created_at, updated_at, published_at
+		FROM listings
+		WHERE id = $1
+	`
+	var l models.Listing
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&l.ID, &l.OwnerID, &l.Title, &l.Slug, &l.Description, &l.PropertyType, &l.Status,
+		&l.PriceMXN, &l.AreaM2, &l.ConstructionM2, &l.Municipality, &l.Community,
+		&l.Latitude, &l.Longitude, &l.IsFeatured, &l.ViewCount, &l.CreatedAt, &l.UpdatedAt, &l.PublishedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("listing_repo: get by id: %w", err)
+	}
+
+	images, err := r.GetMedia(ctx, l.ID)
+	if err == nil {
+		l.Media = images
+	}
+
+	return &l, nil
+}
+
+func (r *ListingRepo) GetBySlug(ctx context.Context, slug string) (*models.Listing, error) {
+	query := `
+		SELECT id, owner_id, title, slug, description, property_type, status,
+		       price_mxn, area_m2, construction_m2, municipality, community,
+		       latitude, longitude, is_featured, view_count, created_at, updated_at, published_at
+		FROM listings
+		WHERE slug = $1
+	`
+	var l models.Listing
+	err := r.db.QueryRow(ctx, query, slug).Scan(
+		&l.ID, &l.OwnerID, &l.Title, &l.Slug, &l.Description, &l.PropertyType, &l.Status,
+		&l.PriceMXN, &l.AreaM2, &l.ConstructionM2, &l.Municipality, &l.Community,
+		&l.Latitude, &l.Longitude, &l.IsFeatured, &l.ViewCount, &l.CreatedAt, &l.UpdatedAt, &l.PublishedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("listing_repo: get by slug: %w", err)
+	}
+
+	images, err := r.GetMedia(ctx, l.ID)
+	if err == nil {
+		l.Media = images
+	}
+
+	return &l, nil
+}
+
 func (r *ListingRepo) ListByOwner(ctx context.Context, ownerID uuid.UUID) ([]*models.Listing, error) {
 	query := `
 		SELECT id, owner_id, title, slug, description, property_type, status,
 		       price_mxn, area_m2, construction_m2, municipality, community,
-		       latitude, longitude, is_featured, view_count,
-		       created_at, updated_at, published_at
+		       latitude, longitude, is_featured, view_count, created_at, updated_at, published_at
 		FROM listings
 		WHERE owner_id = $1
-		ORDER BY created_at DESC`
-
+		ORDER BY created_at DESC
+	`
 	rows, err := r.db.Query(ctx, query, ownerID)
 	if err != nil {
-		return nil, fmt.Errorf("listing_repo.ListByOwner: %w", err)
+		return nil, fmt.Errorf("listing_repo: list by owner: %w", err)
 	}
 	defer rows.Close()
 
-	listings := make([]*models.Listing, 0)
+	var listings []*models.Listing
 	for rows.Next() {
-		listing := &models.Listing{}
+		var l models.Listing
 		err := rows.Scan(
-			&listing.ID,
-			&listing.OwnerID,
-			&listing.Title,
-			&listing.Slug,
-			&listing.Description,
-			&listing.PropertyType,
-			&listing.Status,
-			&listing.PriceMXN,
-			&listing.AreaM2,
-			&listing.ConstructionM2,
-			&listing.Municipality,
-			&listing.Community,
-			&listing.Latitude,
-			&listing.Longitude,
-			&listing.IsFeatured,
-			&listing.ViewCount,
-			&listing.CreatedAt,
-			&listing.UpdatedAt,
-			&listing.PublishedAt,
+			&l.ID, &l.OwnerID, &l.Title, &l.Slug, &l.Description, &l.PropertyType, &l.Status,
+			&l.PriceMXN, &l.AreaM2, &l.ConstructionM2, &l.Municipality, &l.Community,
+			&l.Latitude, &l.Longitude, &l.IsFeatured, &l.ViewCount, &l.CreatedAt, &l.UpdatedAt, &l.PublishedAt,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("listing_repo.ListByOwner scan: %w", err)
+			return nil, fmt.Errorf("listing_repo: scan list by owner: %w", err)
 		}
-		listings = append(listings, listing)
-	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("listing_repo.ListByOwner rows: %w", err)
-	}
-
-	return listings, nil
-}
-
-// Publish sets status to active and records published_at timestamp.
-// ADR-004: draft → active transition.
-func (r *ListingRepo) Publish(ctx context.Context, id uuid.UUID) (*models.Listing, error) {
-	query := `
-		UPDATE listings
-		SET status       = 'active',
-		    published_at = NOW()
-		WHERE id = $1
-		  AND status = 'draft'
-		RETURNING id, owner_id, title, slug, description, property_type, status,
-		          price_mxn, area_m2, construction_m2, municipality, community,
-		          latitude, longitude, is_featured, view_count,
-		          created_at, updated_at, published_at`
-
-	listing := &models.Listing{}
-	err := r.db.QueryRow(ctx, query, id).Scan(
-		&listing.ID,
-		&listing.OwnerID,
-		&listing.Title,
-		&listing.Slug,
-		&listing.Description,
-		&listing.PropertyType,
-		&listing.Status,
-		&listing.PriceMXN,
-		&listing.AreaM2,
-		&listing.ConstructionM2,
-		&listing.Municipality,
-		&listing.Community,
-		&listing.Latitude,
-		&listing.Longitude,
-		&listing.IsFeatured,
-		&listing.ViewCount,
-		&listing.CreatedAt,
-		&listing.UpdatedAt,
-		&listing.PublishedAt,
-	)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
+		images, err := r.GetMedia(ctx, l.ID)
+		if err == nil {
+			l.Media = images
 		}
-		return nil, fmt.Errorf("listing_repo.Publish: %w", err)
+
+		listings = append(listings, &l)
 	}
 
-	return listing, nil
+	return listings, rows.Err()
 }
 
-// Archive sets status to archived — soft delete.
-func (r *ListingRepo) Archive(ctx context.Context, id uuid.UUID) error {
+func (r *ListingRepo) AddMedia(ctx context.Context, listingID uuid.UUID, mediaURL string, caption string, isPrimary bool, sortOrder int) (*models.ListingMedia, error) {
+	id := uuid.New()
+	now := time.Now().UTC()
+
 	query := `
-		UPDATE listings
-		SET status = 'archived'
-		WHERE id = $1`
-
-	result, err := r.db.Exec(ctx, query, id)
+		INSERT INTO listing_media (id, listing_id, url, caption, is_primary, sort_order, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`
+	_, err := r.db.Exec(ctx, query, id, listingID, mediaURL, caption, isPrimary, sortOrder, now)
 	if err != nil {
-		return fmt.Errorf("listing_repo.Archive: %w", err)
-	}
-	if result.RowsAffected() == 0 {
-		return ErrNotFound
+		return nil, fmt.Errorf("listing_repo: add media: %w", err)
 	}
 
-	return nil
+	return &models.ListingMedia{
+		ID:        id,
+		ListingID: listingID,
+		URL:       mediaURL,
+		Caption:   caption,
+		IsPrimary: isPrimary,
+		SortOrder: sortOrder,
+		CreatedAt: now,
+	}, nil
 }
 
-// IncrementViewCount adds one to the view counter.
-// Fire and forget — called on every public listing page load.
-func (r *ListingRepo) IncrementViewCount(ctx context.Context, id uuid.UUID) error {
-	query := `UPDATE listings SET view_count = view_count + 1 WHERE id = $1`
-
-	_, err := r.db.Exec(ctx, query, id)
-	if err != nil {
-		return fmt.Errorf("listing_repo.IncrementViewCount: %w", err)
-	}
-
-	return nil
-}
-
-// SlugExists returns true if a slug is already taken.
-// Used by the service layer before inserting a new listing.
-func (r *ListingRepo) SlugExists(ctx context.Context, slug string) (bool, error) {
-	query := `SELECT EXISTS(SELECT 1 FROM listings WHERE slug = $1)`
-
-	var exists bool
-	err := r.db.QueryRow(ctx, query, slug).Scan(&exists)
-	if err != nil {
-		return false, fmt.Errorf("listing_repo.SlugExists: %w", err)
-	}
-
-	return exists, nil
-}
-
-// AddMedia inserts a media record for a listing.
-func (r *ListingRepo) AddMedia(ctx context.Context, listingID uuid.UUID, url, storageKey string, isPrimary bool, sortOrder int) (*models.ListingMedia, error) {
-	query := `
-		INSERT INTO listing_media (listing_id, url, storage_key, is_primary, sort_order)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, listing_id, url, storage_key, is_primary, sort_order, alt_text, created_at`
-
-	media := &models.ListingMedia{}
-	err := r.db.QueryRow(ctx, query,
-		listingID,
-		url,
-		storageKey,
-		isPrimary,
-		sortOrder,
-	).Scan(
-		&media.ID,
-		&media.ListingID,
-		&media.URL,
-		&media.StorageKey,
-		&media.IsPrimary,
-		&media.SortOrder,
-		&media.AltText,
-		&media.CreatedAt,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("listing_repo.AddMedia: %w", err)
-	}
-
-	return media, nil
-}
-
-// GetMedia returns all media for a listing ordered by sort_order.
 func (r *ListingRepo) GetMedia(ctx context.Context, listingID uuid.UUID) ([]models.ListingMedia, error) {
 	query := `
-		SELECT id, listing_id, url, storage_key, is_primary, sort_order, alt_text, created_at
+		SELECT id, listing_id, url, COALESCE(caption, ''), is_primary, sort_order, created_at
 		FROM listing_media
 		WHERE listing_id = $1
-		ORDER BY sort_order ASC, created_at ASC`
-
+		ORDER BY sort_order ASC, created_at ASC
+	`
 	rows, err := r.db.Query(ctx, query, listingID)
 	if err != nil {
-		return nil, fmt.Errorf("listing_repo.GetMedia: %w", err)
+		return nil, fmt.Errorf("listing_repo: get media: %w", err)
 	}
 	defer rows.Close()
 
-	media := make([]models.ListingMedia, 0)
+	var media []models.ListingMedia
 	for rows.Next() {
-		m := models.ListingMedia{}
-		err := rows.Scan(
-			&m.ID,
-			&m.ListingID,
-			&m.URL,
-			&m.StorageKey,
-			&m.IsPrimary,
-			&m.SortOrder,
-			&m.AltText,
-			&m.CreatedAt,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("listing_repo.GetMedia scan: %w", err)
+		var m models.ListingMedia
+		if err := rows.Scan(&m.ID, &m.ListingID, &m.URL, &m.Caption, &m.IsPrimary, &m.SortOrder, &m.CreatedAt); err != nil {
+			return nil, fmt.Errorf("listing_repo: scan media: %w", err)
 		}
 		media = append(media, m)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("listing_repo.GetMedia rows: %w", err)
+	return media, rows.Err()
+}
+
+func (r *ListingRepo) ClearMedia(ctx context.Context, listingID uuid.UUID) error {
+	query := `DELETE FROM listing_media WHERE listing_id = $1`
+	_, err := r.db.Exec(ctx, query, listingID)
+	if err != nil {
+		return fmt.Errorf("listing_repo: clear media: %w", err)
+	}
+	return nil
+}
+
+func (r *ListingRepo) SlugExists(ctx context.Context, slug string) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM listings WHERE slug = $1)`
+	var exists bool
+	err := r.db.QueryRow(ctx, query, slug).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("listing_repo: slug exists: %w", err)
+	}
+	return exists, nil
+}
+
+func (r *ListingRepo) Publish(ctx context.Context, id uuid.UUID) (*models.Listing, error) {
+	now := time.Now().UTC()
+	query := `
+		UPDATE listings
+		SET status = $1, published_at = $2, updated_at = $3
+		WHERE id = $4
+	`
+	res, err := r.db.Exec(ctx, query, models.StatusActive, now, now, id)
+	if err != nil {
+		return nil, fmt.Errorf("listing_repo: publish: %w", err)
+	}
+	if res.RowsAffected() == 0 {
+		return nil, ErrNotFound
+	}
+	return r.GetByID(ctx, id)
+}
+
+func (r *ListingRepo) Archive(ctx context.Context, id uuid.UUID) error {
+	now := time.Now().UTC()
+	query := `
+		UPDATE listings
+		SET status = $1, updated_at = $2
+		WHERE id = $3
+	`
+	_, err := r.db.Exec(ctx, query, models.StatusArchived, now, id)
+	if err != nil {
+		return fmt.Errorf("listing_repo: archive: %w", err)
+	}
+	return nil
+}
+
+func (r *ListingRepo) IncrementViewCount(ctx context.Context, id uuid.UUID) error {
+	query := `UPDATE listings SET view_count = view_count + 1 WHERE id = $1`
+	_, err := r.db.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("listing_repo: increment view count: %w", err)
+	}
+	return nil
+}
+
+func (r *ListingRepo) CreateProperty(ctx context.Context, p *models.Property, photos []string) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("listing_repo: begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	queryProp := `
+		INSERT INTO properties (
+			id, owner_id, title, slug, description, operation_type, property_type,
+			legal_regime, price_mxn, currency, area_total_m2, area_built_m2,
+			bedrooms, bathrooms, parking_spaces, municipality, community, address,
+			latitude, longitude, status, listing_tier, view_count,
+			contact_phone, contact_whatsapp, show_phone, show_whatsapp,
+			created_at, updated_at, published_at
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7,
+			$8, $9, $10, $11, $12,
+			$13, $14, $15, $16, $17, $18,
+			$19, $20, $21, $22, $23,
+			$24, $25, $26, $27,
+			$28, $29, $30
+		)
+	`
+	_, err = tx.Exec(ctx, queryProp,
+		p.ID, p.OwnerID, p.Title, p.Slug, p.Description, p.OperationType, p.PropertyType,
+		p.LegalRegime, p.PriceMXN, p.Currency, p.AreaTotalM2, p.AreaBuiltM2,
+		p.Bedrooms, p.Bathrooms, p.ParkingSpaces, p.Municipality, p.Community, p.Address,
+		p.Latitude, p.Longitude, p.Status, p.ListingTier, p.ViewCount,
+		p.ContactPhone, p.ContactWhatsApp, p.ShowPhone, p.ShowWhatsApp,
+		p.CreatedAt, p.UpdatedAt, p.PublishedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("listing_repo: insert property: %w", err)
 	}
 
-	return media, nil
+	queryPhoto := `
+		INSERT INTO property_images (id, property_id, listing_id, url, is_primary, sort_order, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`
+	now := time.Now().UTC()
+	for idx, photoURL := range photos {
+		isPrimary := (idx == 0)
+		_, err = tx.Exec(ctx, queryPhoto,
+			uuid.New(),
+			p.ID,
+			p.ID,
+			photoURL,
+			isPrimary,
+			idx,
+			now,
+		)
+		if err != nil {
+			return fmt.Errorf("listing_repo: insert property image: %w", err)
+		}
+	}
+
+	return tx.Commit(ctx)
 }

@@ -288,7 +288,7 @@ func (h *ListingHandler) HandleCreateListing(w http.ResponseWriter, r *http.Requ
 		Municipality: municipality,
 	}
 
-	listing, err := h.listings.Create(r.Context(), input)
+	listing, err := h.listings.CreateFromInput(r.Context(), input)
 	if err != nil {
 		slog.Error("failed to create listing",
 			"owner_id", user.ID,
