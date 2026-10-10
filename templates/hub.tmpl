@@ -1,17 +1,18 @@
-{{define "hub_layout"}}
-<!DOCTYPE html>
-<html lang="es">
+{{define "hub"}}<!DOCTYPE html>
+<html lang="es-MX">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{.Title}}</title>
-    <!-- External styling sources parsed cleanly with secure CSP rules -->
+    <title>Valles Centrales | Portal Regional</title>
+    <meta name="description" content="El portal digital de los Valles Centrales de Oaxaca. Bienes raíces certificados, mercado local y directorio comercial verificado.">
+    <meta name="theme-color" content="#121820">
+
     <link rel="stylesheet" href="/static/css/reset.css?v={{.AssetVersion}}">
     <link rel="stylesheet" href="/static/css/tokens.css?v={{.AssetVersion}}">
     <link rel="stylesheet" href="/static/css/fonts.css?v={{.AssetVersion}}">
     <link rel="stylesheet" href="/static/css/hub.css?v={{.AssetVersion}}">
 </head>
-<body>
+<body class="hub-page">
 
     <main class="hub-section">
         <div class="hub-container">
@@ -20,8 +21,9 @@
                 <p class="hub-subtitle">Oaxaca, México</p>
             </header>
             <div class="hub-grid">
-                <!-- Bienes Raíces (Active) -->
-                <div class="hub-card">
+                
+                <!-- Card 1: Bienes Raíces (Active) -->
+                <article class="hub-card">
                     <div class="hub-card-body">
                         <div class="status-indicator">
                             <span class="status-dot dot-green pulsing" aria-hidden="true"></span>
@@ -29,7 +31,7 @@
                         </div>
                         <h2 class="card-title">Bienes Raíces</h2>
                         <p class="card-description">
-                            Mercado independiente de terrenos, casas, ranchos y locales comerciales en la región de los Valles Centrales.
+                            Mercado independiente de terrenos, casas, ranchos y locales comerciales en la región de los Valles Centrales con certeza jurídica.
                         </p>
                     </div>
                     <div class="card-action">
@@ -37,10 +39,10 @@
                             Entrar a Bienes Raíces &rarr;
                         </a>
                     </div>
-                </div>
+                </article>
 
-                <!-- Véndelo (Upcoming) -->
-                <div class="hub-card">
+                <!-- Card 2: Véndelo (Upcoming) -->
+                <article class="hub-card">
                     <div class="hub-card-body">
                         <div class="status-indicator">
                             <span class="status-dot dot-orange pulsing" aria-hidden="true"></span>
@@ -48,7 +50,7 @@
                         </div>
                         <h2 class="card-title">Véndelo</h2>
                         <p class="card-description">
-                            Clasificados locales y compra-venta directa para la comunidad.
+                            Clasificados locales y compra-venta directa para la comunidad oaxaqueña.
                         </p>
                     </div>
                     <div class="card-action">
@@ -56,12 +58,13 @@
                             Acceso Limitado
                         </button>
                     </div>
-                </div>
+                </article>
+
             </div>
         </div>
     </main>
 
-    <!-- Global standard Obsidian Footer -->
+    <!-- Obsidian Footer -->
     <footer class="site-footer">
         <div class="footer-inner">
             <div class="footer-group">
