@@ -6,8 +6,10 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"vallescentrales/internal/services"
@@ -23,22 +25,12 @@ func NewTemplateRenderer(currency *services.CurrencyService) (*TemplateRenderer,
 	templates := make(map[string]*template.Template)
 
 	base := filepath.Join("templates", "base.tmpl")
+	wizardBase := filepath.Join("templates", "wizard", "base.tmpl")
+
 	partials, err := filepath.Glob(filepath.Join("templates", "partials", "*.tmpl"))
 	if err != nil {
 		return nil, fmt.Errorf("templates: failed to glob partials: %w", err)
 	}
-
-	pages, err := filepath.Glob(filepath.Join("templates", "*.tmpl"))
-	if err != nil {
-		return nil, fmt.Errorf("templates: failed to glob pages: %w", err)
-	}
-
-	authPages, err := filepath.Glob(filepath.Join("templates", "auth", "*.tmpl"))
-	if err != nil {
-		return nil, fmt.Errorf("templates: failed to glob auth pages: %w", err)
-	}
-
-	pages = append(pages, authPages...)
 
 	funcs := template.FuncMap{
 		"add": func(a, b int) int {
@@ -112,28 +104,57 @@ func NewTemplateRenderer(currency *services.CurrencyService) (*TemplateRenderer,
 		},
 	}
 
-	for _, page := range pages {
-		name := filepath.Base(page)
-
-		if name == "base.tmpl" {
-			continue
+	// Walk recursively to capture all pages in templates, templates/auth, templates/wizard etc.
+	err = filepath.Walk("templates", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
 		}
 
-		files := []string{page, base}
+		// Only parse files ending in .tmpl
+		if info.IsDir() || !strings.HasSuffix(path, ".tmpl") {
+			return nil
+		}
+
+		// Skip structural base templates and partials
+		if info.Name() == "base.tmpl" || strings.Contains(path, "templates/partials") {
+			return nil
+		}
+
+		// Relative path identifier (e.g., "auth/login.tmpl" or "wizard/account/step1.tmpl")
+		rel, err := filepath.Rel("templates", path)
+		if err != nil {
+			return err
+		}
+
+		// Determine the base template for this rendering group
+		currentBase := base
+		if strings.HasPrefix(rel, "wizard/") {
+			currentBase = wizardBase
+		}
+
+		files := []string{path, currentBase}
 		files = append(files, partials...)
 
-		tmpl, err := template.New(name).Funcs(funcs).ParseFiles(files...)
+		tmpl, err := template.New(info.Name()).Funcs(funcs).ParseFiles(files...)
 		if err != nil {
-			return nil, fmt.Errorf("templates: failed to parse %s: %w", name, err)
+			return fmt.Errorf("templates: failed to parse %s: %w", rel, err)
 		}
 
-		templates[name] = tmpl
-		slog.Debug("template parsed", "name", name)
+		// Register the template by its filename AND its slash-formatted relative path
+		templates[info.Name()] = tmpl
+		templates[filepath.ToSlash(rel)] = tmpl
+
+		slog.Debug("template registered", "rel", rel, "name", info.Name())
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
 	version := strconv.FormatInt(time.Now().Unix(), 10)
 
-	slog.Info("templates loaded",
+	slog.Info("templates loaded recursively",
 		"count", len(templates),
 		"version", version,
 	)
@@ -145,9 +166,15 @@ func NewTemplateRenderer(currency *services.CurrencyService) (*TemplateRenderer,
 }
 
 func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name string, data any) {
-	tmpl, ok := tr.templates[name]
+	// Clean the name suffix for compatibility
+	cleanName := name
+	if !strings.HasSuffix(cleanName, ".tmpl") {
+		cleanName += ".tmpl"
+	}
+
+	tmpl, ok := tr.templates[cleanName]
 	if !ok {
-		slog.Error("template not found", "name", name)
+		slog.Error("template not found", "name", cleanName)
 		http.Error(w, "template not found", http.StatusInternalServerError)
 		return
 	}
@@ -160,12 +187,12 @@ func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name 
 	w.Header().Set("Cache-Control", "no-store")
 
 	targetTemplate := "base"
-	if name == "hub.tmpl" {
-		targetTemplate = "hub_layout"
+	if cleanName == "hub.tmpl" {
+		targetTemplate = "hub"
 	}
 
 	if err := tmpl.ExecuteTemplate(w, targetTemplate, data); err != nil {
-		slog.Error("template execution failed", "name", name, "error", err)
+		slog.Error("template execution failed", "name", cleanName, "error", err)
 		return
 	}
 }
