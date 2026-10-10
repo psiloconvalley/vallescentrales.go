@@ -114,7 +114,6 @@ func (h *WizardAccountHandler) AutoSave(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"status":"saved"}`))
 }
-
 func (h *WizardAccountHandler) Complete(w http.ResponseWriter, r *http.Request) {
 	user := getUser(r)
 	if user == nil {
@@ -153,5 +152,7 @@ func (h *WizardAccountHandler) Complete(w http.ResponseWriter, r *http.Request) 
 
 	_ = h.engine.Finalize(r.Context(), user.ID, wizard.FlowAccountSetup)
 
-	http.Redirect(w, r, "/dashboard?bienvenido=1", http.StatusSeeOther)
+	// Redirect to the correct "/cuenta" dashboard route
+	http.Redirect(w, r, "/cuenta?bienvenido=1", http.StatusSeeOther)
 }
+

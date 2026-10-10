@@ -394,13 +394,17 @@ func (h *ListingHandler) HandlePublishListing(w http.ResponseWriter, r *http.Req
 	http.Redirect(w, r, "/listings/"+listing.Slug, http.StatusSeeOther)
 }
 
-// ─── Dashboard ───────────────────────────────────────────────────────────────
-
 // HandleDashboard renders the owner dashboard with their listings.
 func (h *ListingHandler) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Force Account Setup Onboarding Wizard if not completed yet
+	if !user.OnboardingCompleted {
+		http.Redirect(w, r, "/bienvenido", http.StatusSeeOther)
 		return
 	}
 
@@ -414,6 +418,7 @@ func (h *ListingHandler) HandleDashboard(w http.ResponseWriter, r *http.Request)
 		"Listings": listings,
 	}))
 }
+
 
 // ─── Delete ──────────────────────────────────────────────────────────────────
 
