@@ -1,4 +1,3 @@
-// internal/app/templates.go
 package app
 
 import (
@@ -8,164 +7,181 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
-
-	"vallescentrales/internal/services"
 )
 
-// TemplateRenderer holds all parsed templates and the asset version.
 type TemplateRenderer struct {
 	templates    map[string]*template.Template
 	assetVersion string
 }
 
-func NewTemplateRenderer(currency *services.CurrencyService) (*TemplateRenderer, error) {
-	templates := make(map[string]*template.Template)
+func NewTemplateRenderer() (*TemplateRenderer, error) {
+	tr := &TemplateRenderer{
+		templates:    make(map[string]*template.Template),
+		assetVersion: fmt.Sprintf("%d", time.Now().Unix()),
+	}
 
-	base := filepath.Join("templates", "base.tmpl")
+	funcMap := template.FuncMap{
+		"formatPrice": func(n int64) string {
+			s := fmt.Sprintf("%d", n)
+			var res []byte
+			for i, c := range s {
+				if i > 0 && (len(s)-i)%3 == 0 {
+					res = append(res, ',')
+				}
+				res = append(res, byte(c))
+			}
+			return string(res)
+		},
+		"formatArea": func(n int) string {
+			s := fmt.Sprintf("%d", n)
+			var res []byte
+			for i, c := range s {
+				if i > 0 && (len(s)-i)%3 == 0 {
+					res = append(res, ',')
+				}
+				res = append(res, byte(c))
+			}
+			return string(res)
+		},
+		"formatDate": func(t time.Time) string {
+			return t.Format("02 Jan 2006")
+		},
+		"timeAgo": func(t time.Time) string {
+			d := time.Since(t)
+			switch {
+			case d < time.Minute:
+				return "hace un momento"
+			case d < time.Hour:
+				m := int(d.Minutes())
+				if m == 1 {
+					return "hace 1 minuto"
+				}
+				return fmt.Sprintf("hace %d minutos", m)
+			case d < 24*time.Hour:
+				h := int(d.Hours())
+				if h == 1 {
+					return "hace 1 hora"
+				}
+				return fmt.Sprintf("hace %d horas", h)
+			case d < 30*24*time.Hour:
+				days := int(d.Hours() / 24)
+				if days == 1 {
+					return "hace 1 día"
+				}
+				return fmt.Sprintf("hace %d días", days)
+			default:
+				return t.Format("02 Jan 2006")
+			}
+		},
+		"hasPrefix": strings.HasPrefix,
+		"title":     strings.Title,
+		"seq": func(start, end int) []int {
+			var res []int
+			for i := start; i <= end; i++ {
+				res = append(res, i)
+			}
+			return res
+		},
+		"add": func(a, b int) int { return a + b },
+		"sub": func(a, b int) int { return a - b },
+		"dict": func(values ...any) (map[string]any, error) {
+			if len(values)%2 != 0 {
+				return nil, fmt.Errorf("dict requires even number of arguments")
+			}
+			m := make(map[string]any, len(values)/2)
+			for i := 0; i < len(values); i += 2 {
+				key, ok := values[i].(string)
+				if !ok {
+					return nil, fmt.Errorf("dict key must be string, got %T", values[i])
+				}
+				m[key] = values[i+1]
+			}
+			return m, nil
+		},
+	}
+
+	// 1. Gather all shared partials
+	var partials []string
+	if err := filepath.Walk("templates/partials", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !info.IsDir() && strings.HasSuffix(path, ".tmpl") {
+			partials = append(partials, path)
+		}
+		return nil
+	}); err != nil {
+		slog.Warn("could not walk partials directory", "error", err)
+	}
+
+	mainBase := filepath.Join("templates", "base.tmpl")
 	wizardBase := filepath.Join("templates", "wizard", "base.tmpl")
 
-	partials, err := filepath.Glob(filepath.Join("templates", "partials", "*.tmpl"))
-	if err != nil {
-		return nil, fmt.Errorf("templates: failed to glob partials: %w", err)
-	}
-
-	funcs := template.FuncMap{
-		"add": func(a, b int) int {
-			return a + b
-		},
-		"formatMXN": services.FormatMXN,
-		"formatUSD": services.FormatUSD,
-		"convertToUSD": func(mxn float64) float64 {
-			if currency == nil {
-				return 0
-			}
-			return currency.ConvertMXNToUSD(mxn)
-		},
-		"formatPrice": func(amount float64, curr string) string {
-			if curr == "USD" {
-				return services.FormatUSD(amount)
-			}
-			return services.FormatMXN(amount)
-		},
-		"formatNumber": func(v any) string {
-			switch n := v.(type) {
-			case float64:
-				return fmt.Sprintf("%.2f", n)
-			case float32:
-				return fmt.Sprintf("%.2f", n)
-			case int, int64, int32:
-				return fmt.Sprintf("%d", n)
-			default:
-				return fmt.Sprintf("%v", v)
-			}
-		},
-		"operationLabel": func(op string) string {
-			switch op {
-			case "sale":
-				return "Venta"
-			case "rent":
-				return "Renta"
-			case "temporary_rental":
-				return "Renta Temporal"
-			default:
-				return op
-			}
-		},
-		"propertyLabel": func(pt string) string {
-			switch pt {
-			case "land":
-				return "Terreno"
-			case "house":
-				return "Casa"
-			case "apartment":
-				return "Departamento"
-			case "commercial":
-				return "Local Comercial"
-			case "office":
-				return "Oficina"
-			default:
-				return pt
-			}
-		},
-		"propertyRegimeLabel": func(r string) string {
-			switch r {
-			case "escritura_publica":
-				return "Escritura Pública"
-			case "comunal":
-				return "Comunal"
-			case "ejidal":
-				return "Ejidal"
-			default:
-				return r
-			}
-		},
-	}
-
-	// Walk recursively to capture all pages in templates, templates/auth, templates/wizard etc.
-	err = filepath.Walk("templates", func(path string, info os.FileInfo, err error) error {
+	// 2. Walk templates recursively
+	err := filepath.Walk("templates", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-
-		// Only parse files ending in .tmpl
-		if info.IsDir() || !strings.HasSuffix(path, ".tmpl") {
+		if info.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(path, ".tmpl") {
 			return nil
 		}
 
-		// Skip structural base templates and partials
-		if info.Name() == "base.tmpl" || strings.Contains(path, "templates/partials") {
-			return nil
-		}
-
-		// Relative path identifier (e.g., "auth/login.tmpl" or "wizard/account/step1.tmpl")
+		// Normalize to forward slashes for reliable map lookups
 		rel, err := filepath.Rel("templates", path)
 		if err != nil {
 			return err
 		}
+		cleanRel := filepath.ToSlash(rel)
 
-		// Determine the base template for this rendering group
-		currentBase := base
-		if strings.HasPrefix(rel, "wizard/") {
-			currentBase = wizardBase
+		// Skip base layouts and partials from standalone compilation
+		if cleanRel == "base.tmpl" || cleanRel == "wizard/base.tmpl" || strings.HasPrefix(cleanRel, "partials/") {
+			return nil
 		}
 
-		files := []string{path, currentBase}
-		files = append(files, partials...)
+		// Gateway hub template renders standalone
+		if cleanRel == "hub.tmpl" {
+			tmpl, err := template.New("hub.tmpl").Funcs(funcMap).ParseFiles(path)
+			if err != nil {
+				return fmt.Errorf("parsing %s: %w", path, err)
+			}
+			tr.templates["hub.tmpl"] = tmpl
+			return nil
+		}
 
-		tmpl, err := template.New(info.Name()).Funcs(funcs).ParseFiles(files...)
+		// Choose the appropriate base layout
+		var files []string
+		if strings.HasPrefix(cleanRel, "wizard/") {
+			files = append([]string{wizardBase, path}, partials...)
+		} else {
+			files = append([]string{mainBase, path}, partials...)
+		}
+
+		tmpl, err := template.New(filepath.Base(path)).Funcs(funcMap).ParseFiles(files...)
 		if err != nil {
-			return fmt.Errorf("templates: failed to parse %s: %w", rel, err)
+			return fmt.Errorf("parsing template %s: %w", path, err)
 		}
 
-		// Register the template by its filename AND its slash-formatted relative path
-		templates[info.Name()] = tmpl
-		templates[filepath.ToSlash(rel)] = tmpl
+		// Register under relative path (e.g. "wizard/account/step1.tmpl")
+		// and basename (e.g. "step1.tmpl") for flexible handler lookups
+		tr.templates[cleanRel] = tmpl
+		tr.templates[filepath.Base(path)] = tmpl
 
-		slog.Debug("template registered", "rel", rel, "name", info.Name())
 		return nil
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loading templates: %w", err)
 	}
 
-	version := strconv.FormatInt(time.Now().Unix(), 10)
-
-	slog.Info("templates loaded recursively",
-		"count", len(templates),
-		"version", version,
-	)
-
-	return &TemplateRenderer{
-		templates:    templates,
-		assetVersion: version,
-	}, nil
+	return tr, nil
 }
+
 func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name string, data any) {
-	// Clean the name suffix for compatibility
 	cleanName := name
 	if !strings.HasSuffix(cleanName, ".tmpl") {
 		cleanName += ".tmpl"
@@ -185,7 +201,7 @@ func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 
-	// Determine layout target based on filename/directory prefix
+	// Determine the layout define block to execute
 	targetTemplate := "base"
 	if cleanName == "hub.tmpl" {
 		targetTemplate = "hub"
@@ -199,4 +215,3 @@ func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name 
 		return
 	}
 }
-
