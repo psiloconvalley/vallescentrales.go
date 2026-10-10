@@ -164,7 +164,6 @@ func NewTemplateRenderer(currency *services.CurrencyService) (*TemplateRenderer,
 		assetVersion: version,
 	}, nil
 }
-
 func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name string, data any) {
 	// Clean the name suffix for compatibility
 	cleanName := name
@@ -186,13 +185,18 @@ func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 
+	// Determine layout target based on filename/directory prefix
 	targetTemplate := "base"
 	if cleanName == "hub.tmpl" {
 		targetTemplate = "hub"
+	} else if strings.HasPrefix(cleanName, "wizard/") {
+		targetTemplate = "wizard/base"
 	}
 
 	if err := tmpl.ExecuteTemplate(w, targetTemplate, data); err != nil {
 		slog.Error("template execution failed", "name", cleanName, "error", err)
+		http.Error(w, "internal server error during template execution", http.StatusInternalServerError)
 		return
 	}
 }
+
