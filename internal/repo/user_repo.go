@@ -279,19 +279,19 @@ func (r *UserRepo) UpdateProfile(ctx context.Context, id uuid.UUID, input Update
 
 	return user, nil
 }
-
 // UpdateOnboarding saves onboarding wizard choices specifically.
-func (r *UserRepo) UpdateOnboarding(ctx context.Context, id uuid.UUID, fullName, userType string, phone, whatsapp, municipality, bio *string, showPhone, showWhatsApp bool) (*models.User, error) {
+func (r *UserRepo) UpdateOnboarding(ctx context.Context, id uuid.UUID, fullName string, displayName *string, userType string, phone, whatsapp, municipality, bio *string, showPhone, showWhatsApp bool) (*models.User, error) {
 	query := fmt.Sprintf(`
 		UPDATE users
 		SET full_name = $2,
-		    user_type = $3,
-		    phone = $4,
-		    whatsapp = $5,
-		    municipality = $6,
-		    bio = $7,
-		    show_phone = $8,
-		    show_whatsapp = $9,
+		    display_name = $3,
+		    user_type = $4,
+		    phone = $5,
+		    whatsapp = $6,
+		    municipality = $7,
+		    bio = $8,
+		    show_phone = $9,
+		    show_whatsapp = $10,
 		    onboarding_completed = TRUE,
 		    updated_at = NOW()
 		WHERE id = $1
@@ -300,6 +300,7 @@ func (r *UserRepo) UpdateOnboarding(ctx context.Context, id uuid.UUID, fullName,
 	user, err := scanUser(r.db.QueryRow(ctx, query,
 		id,
 		fullName,
+		displayName,
 		userType,
 		phone,
 		whatsapp,

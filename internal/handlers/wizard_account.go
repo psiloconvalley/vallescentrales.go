@@ -137,6 +137,7 @@ func (h *WizardAccountHandler) Complete(w http.ResponseWriter, r *http.Request) 
 		r.Context(),
 		user.ID,
 		fullName,
+		stringPtr(stringVal(d, "display_name")),
 		stringVal(d, "user_type"),
 		stringPtr(stringVal(d, "phone")),
 		stringPtr(stringVal(d, "whatsapp")),
@@ -155,4 +156,3 @@ func (h *WizardAccountHandler) Complete(w http.ResponseWriter, r *http.Request) 
 	// Redirect to the correct "/cuenta" dashboard route
 	http.Redirect(w, r, "/cuenta?bienvenido=1", http.StatusSeeOther)
 }
-
