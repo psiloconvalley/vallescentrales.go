@@ -123,7 +123,85 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 				return t.Format("02 Jan 2006")
 			}
 		},
+		"operationLabel": func(s string) string {
+			switch strings.ToLower(s) {
+			case "sale", "venta":
+				return "Venta"
+			case "rent", "renta":
+				return "Renta"
+			case "temporary_rent", "renta_temporal":
+				return "Renta Temporal"
+			default:
+				return strings.Title(s)
+			}
+		},
+		"propertyTypeLabel": func(s string) string {
+			switch strings.ToLower(s) {
+			case "house", "casa":
+				return "Casa"
+			case "apartment", "departamento":
+				return "Departamento"
+			case "land", "terreno":
+				return "Terreno"
+			case "commercial", "local_comercial":
+				return "Local Comercial"
+			case "office", "oficina":
+				return "Oficina"
+			case "ranch", "rancho":
+				return "Rancho / Finca"
+			default:
+				return strings.Title(s)
+			}
+		},
+		"statusLabel": func(s string) string {
+			switch strings.ToLower(s) {
+			case "active", "activo":
+				return "Activo"
+			case "pending", "pendiente":
+				return "En Revisión"
+			case "draft", "borrador":
+				return "Borrador"
+			case "sold", "vendido":
+				return "Vendido"
+			case "rented", "rentado":
+				return "Rentado"
+			case "archived", "archivado":
+				return "Archivado"
+			default:
+				return strings.Title(s)
+			}
+		},
+		"legalRegimeLabel": func(s string) string {
+			switch strings.ToLower(s) {
+			case "escritura_publica", "public_deed":
+				return "Escritura Pública"
+			case "ejidal", "ejido", "comunal":
+				return "Propiedad Ejidal / Comunal"
+			case "posesion", "possession_certificate":
+				return "Constancia de Posesión"
+			default:
+				return strings.Title(s)
+			}
+		},
+		"userTypeLabel": func(s string) string {
+			switch strings.ToLower(s) {
+			case "buyer":
+				return "Comprador / Inversionista"
+			case "owner":
+				return "Propietario Particular"
+			case "agent":
+				return "Asesor Inmobiliario"
+			case "agency":
+				return "Agencia Inmobiliaria"
+			default:
+				return strings.Title(s)
+			}
+		},
 		"hasPrefix": strings.HasPrefix,
+		"hasSuffix": strings.HasSuffix,
+		"contains":  strings.Contains,
+		"lower":     strings.ToLower,
+		"upper":     strings.ToUpper,
 		"title":     strings.Title,
 		"seq": func(start, end int) []int {
 			var res []int
@@ -145,6 +223,18 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 				return ""
 			}
 			return *s
+		},
+		"derefInt": func(i *int) int {
+			if i == nil {
+				return 0
+			}
+			return *i
+		},
+		"derefBool": func(b *bool) bool {
+			if b == nil {
+				return false
+			}
+			return *b
 		},
 		"dict": func(values ...any) (map[string]any, error) {
 			if len(values)%2 != 0 {
