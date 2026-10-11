@@ -330,6 +330,7 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 
 	return tr, nil
 }
+
 func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name string, data any) {
 	cleanName := name
 	if !strings.HasSuffix(cleanName, ".tmpl") {
@@ -350,7 +351,7 @@ func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 
-	// Dynamic layout auto-detection
+	// Dynamic layout auto-detection using Lookup
 	targetTemplate := "base"
 	if tmpl.Lookup("hub") != nil {
 		targetTemplate = "hub"
@@ -364,4 +365,3 @@ func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name 
 		return
 	}
 }
-
