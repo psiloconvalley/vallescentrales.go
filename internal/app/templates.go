@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"vallescentrales/internal/services"
+
+	"github.com/justinas/nosurf"
 )
 
 type TemplateRenderer struct {
@@ -344,9 +346,23 @@ func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name 
 		return
 	}
 
+	// Format templateData as map to inject custom tokens dynamically
+	var templateData map[string]any
 	if m, ok := data.(map[string]any); ok {
-		m["AssetVersion"] = tr.assetVersion
+		templateData = m
+	} else if data != nil {
+		templateData = map[string]any{
+			"Data": data,
+		}
+	} else {
+		templateData = make(map[string]any)
 	}
+
+	// 1. Inject asset cache buster
+	templateData["AssetVersion"] = tr.assetVersion
+
+	// 2. CRYPTOGRAPHICALLY INJECT CSRF TOKEN AUTOMATICALLY
+	templateData["CSRFToken"] = nosurf.Token(r)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
@@ -359,7 +375,7 @@ func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name 
 		targetTemplate = "wizard/base"
 	}
 
-	if err := tmpl.ExecuteTemplate(w, targetTemplate, data); err != nil {
+	if err := tmpl.ExecuteTemplate(w, targetTemplate, templateData); err != nil {
 		slog.Error("template execution failed", "name", cleanName, "target", targetTemplate, "error", err)
 		http.Error(w, "internal server error during template execution", http.StatusInternalServerError)
 		return
