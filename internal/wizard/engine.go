@@ -3,12 +3,11 @@ package wizard
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -17,121 +16,208 @@ type Engine struct {
 }
 
 func NewEngine(db *pgxpool.Pool) *Engine {
+	// Ensure the wizard_sessions table exists defensively
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	createTableSQL := `
+	CREATE TABLE IF NOT EXISTS wizard_sessions (
+		id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		flow_type VARCHAR(50) NOT NULL,
+		current_step INT NOT NULL DEFAULT 1,
+		total_steps INT NOT NULL DEFAULT 2,
+		data JSONB NOT NULL DEFAULT '{}'::jsonb,
+		expires_at TIMESTAMPTZ NOT NULL,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+	);
+	CREATE INDEX IF NOT EXISTS idx_wizard_sessions_user_flow ON wizard_sessions(user_id, flow_type);
+	`
+	if _, err := db.Exec(ctx, createTableSQL); err != nil {
+		slog.Warn("could not auto-ensure wizard_sessions table", "error", err)
+	} else {
+		slog.Info("wizard_sessions table ready")
+	}
+
 	return &Engine{db: db}
 }
 
 func (e *Engine) StartOrResume(ctx context.Context, userID uuid.UUID, flow FlowType) (*Session, error) {
-	existing, err := e.Get(ctx, userID, flow)
-	if err == nil && existing != nil {
-		return existing, nil
-	}
-
 	totalSteps := 2
-	if flow == FlowPropertyPublish {
+	if flow == FlowProperty {
 		totalSteps = 3
 	}
 
-	now := time.Now().UTC()
-	session := &Session{
+	// 1. Try to find existing valid session
+	query := `
+		SELECT id, user_id, flow_type, current_step, total_steps, data, expires_at, created_at, updated_at
+		FROM wizard_sessions
+		WHERE user_id = $1 AND flow_type = $2 AND expires_at > NOW()
+		ORDER BY updated_at DESC
+		LIMIT 1
+	`
+	var s Session
+	var dataBytes []byte
+
+	err := e.db.QueryRow(ctx, query, userID, string(flow)).Scan(
+		&s.ID,
+		&s.UserID,
+		&s.FlowType,
+		&s.CurrentStep,
+		&s.TotalSteps,
+		&dataBytes,
+		&s.ExpiresAt,
+		&s.CreatedAt,
+		&s.UpdatedAt,
+	)
+
+	if err == nil {
+		s.Data = make(map[string]any)
+		if len(dataBytes) > 0 {
+			if err := json.Unmarshal(dataBytes, &s.Data); err != nil {
+				slog.Warn("could not unmarshal wizard session data", "error", err)
+			}
+		}
+		return &s, nil
+	}
+
+	// 2. Otherwise create a new session
+	s = Session{
 		ID:          uuid.New(),
 		UserID:      userID,
 		FlowType:    flow,
 		CurrentStep: 1,
 		TotalSteps:  totalSteps,
-		Data:        make(map[string]interface{}),
-		CreatedAt:   now,
-		UpdatedAt:   now,
-		ExpiresAt:   now.Add(7 * 24 * time.Hour),
+		Data:        make(map[string]any),
+		ExpiresAt:   time.Now().Add(7 * 24 * time.Hour),
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
-	dataJSON, _ := json.Marshal(session.Data)
-	query := `
-		INSERT INTO wizard_sessions (id, user_id, flow_type, current_step, total_steps, data, created_at, updated_at, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	insertSQL := `
+		INSERT INTO wizard_sessions (id, user_id, flow_type, current_step, total_steps, data, expires_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, '{}'::jsonb, $6, $7, $8)
 	`
-	_, err = e.db.Exec(ctx, query,
-		session.ID, session.UserID, string(session.FlowType),
-		session.CurrentStep, session.TotalSteps, dataJSON,
-		session.CreatedAt, session.UpdatedAt, session.ExpiresAt,
-	)
+	_, err = e.db.Exec(ctx, insertSQL, s.ID, s.UserID, string(s.FlowType), s.CurrentStep, s.TotalSteps, s.ExpiresAt, s.CreatedAt, s.UpdatedAt)
 	if err != nil {
-		return nil, fmt.Errorf("wizard_engine: start: %w", err)
-	}
-
-	return session, nil
-}
-
-func (e *Engine) Get(ctx context.Context, userID uuid.UUID, flow FlowType) (*Session, error) {
-	query := `
-		SELECT id, user_id, flow_type, current_step, total_steps, data, created_at, updated_at, expires_at
-		FROM wizard_sessions
-		WHERE user_id = $1 AND flow_type = $2 AND expires_at > $3
-		ORDER BY updated_at DESC
-		LIMIT 1
-	`
-	var s Session
-	var flowStr string
-	var dataBytes []byte
-
-	err := e.db.QueryRow(ctx, query, userID, string(flow), time.Now().UTC()).Scan(
-		&s.ID, &s.UserID, &flowStr, &s.CurrentStep, &s.TotalSteps, &dataBytes,
-		&s.CreatedAt, &s.UpdatedAt, &s.ExpiresAt,
-	)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("wizard_engine: get: %w", err)
-	}
-
-	s.FlowType = FlowType(flowStr)
-	if len(dataBytes) > 0 {
-		_ = json.Unmarshal(dataBytes, &s.Data)
-	}
-	if s.Data == nil {
-		s.Data = make(map[string]interface{})
+		slog.Error("failed to create wizard session", "user_id", userID, "flow", flow, "error", err)
+		return nil, fmt.Errorf("creating wizard session: %w", err)
 	}
 
 	return &s, nil
 }
 
-func (e *Engine) SaveStep(ctx context.Context, userID uuid.UUID, flow FlowType, step int, stepData map[string]interface{}) (*Session, error) {
-	session, err := e.StartOrResume(ctx, userID, flow)
+func (e *Engine) Get(ctx context.Context, userID uuid.UUID, flow FlowType) (*Session, error) {
+	query := `
+		SELECT id, user_id, flow_type, current_step, total_steps, data, expires_at, created_at, updated_at
+		FROM wizard_sessions
+		WHERE user_id = $1 AND flow_type = $2 AND expires_at > NOW()
+		ORDER BY updated_at DESC
+		LIMIT 1
+	`
+	var s Session
+	var dataBytes []byte
+
+	err := e.db.QueryRow(ctx, query, userID, string(flow)).Scan(
+		&s.ID,
+		&s.UserID,
+		&s.FlowType,
+		&s.CurrentStep,
+		&s.TotalSteps,
+		&dataBytes,
+		&s.ExpiresAt,
+		&s.CreatedAt,
+		&s.UpdatedAt,
+	)
 	if err != nil {
 		return nil, err
 	}
 
+	s.Data = make(map[string]any)
+	if len(dataBytes) > 0 {
+		if err := json.Unmarshal(dataBytes, &s.Data); err != nil {
+			slog.Warn("could not unmarshal wizard data", "error", err)
+		}
+	}
+
+	return &s, nil
+}
+
+func (e *Engine) SaveStep(ctx context.Context, userID uuid.UUID, flow FlowType, step int, stepData map[string]any) (*Session, error) {
+	session, err := e.Get(ctx, userID, flow)
+	if err != nil {
+		return nil, fmt.Errorf("getting session for savestep: %w", err)
+	}
+
+	if session.Data == nil {
+		session.Data = make(map[string]any)
+	}
 	for k, v := range stepData {
 		session.Data[k] = v
 	}
 
-	session.CurrentStep = step
-	session.UpdatedAt = time.Now().UTC()
-
-	dataJSON, _ := json.Marshal(session.Data)
-	query := `
-		UPDATE wizard_sessions
-		SET current_step = $1, data = $2, updated_at = $3
-		WHERE id = $4
-	`
-	_, err = e.db.Exec(ctx, query, session.CurrentStep, dataJSON, session.UpdatedAt, session.ID)
+	dataBytes, err := json.Marshal(session.Data)
 	if err != nil {
-		return nil, fmt.Errorf("wizard_engine: save step: %w", err)
+		return nil, fmt.Errorf("marshaling merged step data: %w", err)
 	}
 
+	query := `
+		UPDATE wizard_sessions
+		SET current_step = $1,
+		    data = $2::jsonb,
+		    updated_at = NOW()
+		WHERE id = $3
+	`
+	_, err = e.db.Exec(ctx, query, step, dataBytes, session.ID)
+	if err != nil {
+		return nil, fmt.Errorf("updating wizard step: %w", err)
+	}
+
+	session.CurrentStep = step
 	return session, nil
 }
 
-func (e *Engine) AutoSave(ctx context.Context, userID uuid.UUID, flow FlowType, step int, stepData map[string]interface{}) error {
-	_, err := e.SaveStep(ctx, userID, flow, step, stepData)
+func (e *Engine) AutoSave(ctx context.Context, userID uuid.UUID, flow FlowType, step int, stepData map[string]any) error {
+	session, err := e.Get(ctx, userID, flow)
+	if err != nil {
+		return fmt.Errorf("getting session for autosave: %w", err)
+	}
+
+	if session.Data == nil {
+		session.Data = make(map[string]any)
+	}
+	for k, v := range stepData {
+		session.Data[k] = v
+	}
+
+	dataBytes, err := json.Marshal(session.Data)
+	if err != nil {
+		return fmt.Errorf("marshaling autosave data: %w", err)
+	}
+
+	query := `
+		UPDATE wizard_sessions
+		SET current_step = $1,
+		    data = $2::jsonb,
+		    updated_at = NOW()
+		WHERE id = $3
+	`
+	_, err = e.db.Exec(ctx, query, step, dataBytes, session.ID)
 	return err
 }
 
 func (e *Engine) Finalize(ctx context.Context, userID uuid.UUID, flow FlowType) error {
-	query := `DELETE FROM wizard_sessions WHERE user_id = $1 AND flow_type = $2`
-	_, err := e.db.Exec(ctx, query, userID, string(flow))
+	session, err := e.Get(ctx, userID, flow)
 	if err != nil {
-		return fmt.Errorf("wizard_engine: finalize: %w", err)
+		return fmt.Errorf("getting session for finalize: %w", err)
 	}
-	return nil
+
+	_, err = e.db.Exec(ctx, "DELETE FROM wizard_sessions WHERE id = $1", session.ID)
+	return err
+}
+
+func (e *Engine) Delete(ctx context.Context, sessionID uuid.UUID) error {
+	_, err := e.db.Exec(ctx, "DELETE FROM wizard_sessions WHERE id = $1", sessionID)
+	return err
 }
