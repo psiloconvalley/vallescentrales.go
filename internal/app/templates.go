@@ -330,7 +330,6 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 
 	return tr, nil
 }
-
 func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name string, data any) {
 	cleanName := name
 	if !strings.HasSuffix(cleanName, ".tmpl") {
@@ -351,17 +350,18 @@ func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 
-	// Determine the layout define block to execute
+	// Dynamic layout auto-detection
 	targetTemplate := "base"
-	if cleanName == "hub.tmpl" {
+	if tmpl.Lookup("hub") != nil {
 		targetTemplate = "hub"
-	} else if strings.HasPrefix(cleanName, "wizard/") {
+	} else if tmpl.Lookup("wizard/base") != nil {
 		targetTemplate = "wizard/base"
 	}
 
 	if err := tmpl.ExecuteTemplate(w, targetTemplate, data); err != nil {
-		slog.Error("template execution failed", "name", cleanName, "error", err)
+		slog.Error("template execution failed", "name", cleanName, "target", targetTemplate, "error", err)
 		http.Error(w, "internal server error during template execution", http.StatusInternalServerError)
 		return
 	}
 }
+
