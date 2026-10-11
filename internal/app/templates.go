@@ -9,17 +9,21 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"vallescentrales/internal/services"
 )
 
 type TemplateRenderer struct {
 	templates    map[string]*template.Template
 	assetVersion string
+	currencySvc  *services.CurrencyService
 }
 
-func NewTemplateRenderer() (*TemplateRenderer, error) {
+func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRenderer, error) {
 	tr := &TemplateRenderer{
 		templates:    make(map[string]*template.Template),
 		assetVersion: fmt.Sprintf("%d", time.Now().Unix()),
+		currencySvc:  currencySvc,
 	}
 
 	funcMap := template.FuncMap{
@@ -33,6 +37,38 @@ func NewTemplateRenderer() (*TemplateRenderer, error) {
 				res = append(res, byte(c))
 			}
 			return string(res)
+		},
+		"formatMXN": func(n any) string {
+			var val float64
+			switch v := n.(type) {
+			case int:
+				val = float64(v)
+			case int64:
+				val = float64(v)
+			case float64:
+				val = v
+			default:
+				return fmt.Sprintf("$%v MXN", n)
+			}
+			return services.FormatMXN(val)
+		},
+		"formatUSD": func(n any) string {
+			var val float64
+			switch v := n.(type) {
+			case int:
+				val = float64(v)
+			case int64:
+				val = float64(v)
+			case float64:
+				val = v
+			default:
+				return fmt.Sprintf("$%v USD", n)
+			}
+			rate := 20.0
+			if currencySvc != nil && currencySvc.Rate() > 0 {
+				rate = currencySvc.Rate()
+			}
+			return services.FormatUSD(val / rate)
 		},
 		"formatArea": func(n int) string {
 			s := fmt.Sprintf("%d", n)
