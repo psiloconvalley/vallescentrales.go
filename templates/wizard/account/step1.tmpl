@@ -1,56 +1,67 @@
-{{define "wizard-step"}}
-<h1 class="wizard-step-heading">Bienvenido a Valles Centrales</h1>
-<p class="wizard-step-description">Vamos a configurar tu cuenta en 2 pasos rápidos. Primero, cuéntanos quién eres.</p>
+{{define "title"}}Bienvenido — Paso 1 de 2{{end}}
 
-<form method="POST" action="/bienvenido/paso/1" data-wizard-form data-autosave-url="/bienvenido/auto-save" novalidate>
-    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-
-    <div class="wizard-field">
-        <label class="wizard-label" for="full_name">Nombre completo *</label>
-        <input class="wizard-input" type="text" id="full_name" name="full_name"
-               value="{{index .Data "full_name"}}"
-               required autocomplete="name" minlength="2"
-               placeholder="Ej. María López García">
-        <span class="wizard-help">Tu nombre tal como aparece en tus identificaciones oficiales.</span>
+{{define "content"}}
+<div class="wizard-card">
+    <div class="wizard-progress">
+        <div class="wizard-progress-bar step-1-of-2"></div>
+    </div>
+    
+    <div class="wizard-header-block">
+        <span class="wizard-step-badge">Paso 1 de 2</span>
+        <h1 class="wizard-title">¿Cómo planeas usar Valles Centrales?</h1>
+        <p class="wizard-subtitle">Personalizaremos tu experiencia según tus necesidades en la región de Oaxaca.</p>
     </div>
 
-    <div class="wizard-field">
-        <label class="wizard-label" for="display_name">Nombre público o Alias</label>
-        <input class="wizard-input" type="text" id="display_name" name="display_name"
-               value="{{index .Data "display_name"}}"
-               autocomplete="nickname"
-               placeholder="Ej. María L. (así aparecerás en tus anuncios)">
-        <span class="wizard-help">Cómo te verán los compradores. Puedes usar un nombre comercial o alias.</span>
-    </div>
+    <form method="POST" action="/bienvenido/paso/1" class="wizard-form">
+        <div class="wizard-options-grid">
+            <label class="wizard-option-card">
+                <input type="radio" name="user_type" value="buyer" class="wizard-radio" required {{if eq .UserType "buyer"}}checked{{end}}>
+                <div class="wizard-option-content">
+                    <div class="wizard-option-icon">🔍</div>
+                    <div class="wizard-option-text">
+                        <h3 class="wizard-option-title">Comprador / Inversionista</h3>
+                        <p class="wizard-option-desc">Busco comprar o rentar casas, departamentos o terrenos en Valles Centrales.</p>
+                    </div>
+                </div>
+            </label>
 
-    <div class="wizard-field">
-        <label class="wizard-label" for="user_type">¿Cuál es tu perfil?</label>
-        <div class="wizard-choice-grid">
-            <label class="wizard-choice-card">
-                <input type="radio" name="user_type" value="particular"
-                       {{if eq (index .Data "user_type") "particular"}}checked{{end}}
-                       {{if not (index .Data "user_type")}}checked{{end}}>
-                <span class="wizard-choice-icon">🏠</span>
-                <span class="wizard-choice-label">Particular</span>
+            <label class="wizard-option-card">
+                <input type="radio" name="user_type" value="owner" class="wizard-radio" {{if eq .UserType "owner"}}checked{{end}}>
+                <div class="wizard-option-content">
+                    <div class="wizard-option-icon">🏡</div>
+                    <div class="wizard-option-text">
+                        <h3 class="wizard-option-title">Propietario Particular</h3>
+                        <p class="wizard-option-desc">Deseo publicar y promocionar mis propiedades directamente sin intermediarios.</p>
+                    </div>
+                </div>
             </label>
-            <label class="wizard-choice-card">
-                <input type="radio" name="user_type" value="agente"
-                       {{if eq (index .Data "user_type") "agente"}}checked{{end}}>
-                <span class="wizard-choice-icon">💼</span>
-                <span class="wizard-choice-label">Agente Inmobiliario</span>
+
+            <label class="wizard-option-card">
+                <input type="radio" name="user_type" value="agent" class="wizard-radio" {{if eq .UserType "agent"}}checked{{end}}>
+                <div class="wizard-option-content">
+                    <div class="wizard-option-icon">💼</div>
+                    <div class="wizard-option-text">
+                        <h3 class="wizard-option-title">Asesor Inmobiliario</h3>
+                        <p class="wizard-option-desc">Soy profesional independiente administrando inventario en Oaxaca.</p>
+                    </div>
+                </div>
             </label>
-            <label class="wizard-choice-card">
-                <input type="radio" name="user_type" value="inmobiliaria"
-                       {{if eq (index .Data "user_type") "inmobiliaria"}}checked{{end}}>
-                <span class="wizard-choice-icon">🏢</span>
-                <span class="wizard-choice-label">Inmobiliaria</span>
+
+            <label class="wizard-option-card">
+                <input type="radio" name="user_type" value="agency" class="wizard-radio" {{if eq .UserType "agency"}}checked{{end}}>
+                <div class="wizard-option-content">
+                    <div class="wizard-option-icon">🏢</div>
+                    <div class="wizard-option-text">
+                        <h3 class="wizard-option-title">Agencia Inmobiliaria</h3>
+                        <p class="wizard-option-desc">Represento una inmobiliaria o desarrolladora con equipo de ventas.</p>
+                    </div>
+                </div>
             </label>
         </div>
-    </div>
 
-    <div class="wizard-nav">
-        <span class="wizard-nav-spacer"></span>
-        <button type="submit" class="wizard-btn wizard-btn-primary">Continuar →</button>
-    </div>
-</form>
+        <div class="wizard-actions">
+            <button type="submit" class="btn btn-primary btn-lg">Continuar al Paso 2 &rarr;</button>
+        </div>
+    </form>
+</div>
 {{end}}
