@@ -19,6 +19,33 @@ type TemplateRenderer struct {
 	currencySvc  *services.CurrencyService
 }
 
+func formatCommaNumber(n int64) string {
+	s := fmt.Sprintf("%d", n)
+	var res []byte
+	for i, c := range s {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			res = append(res, ',')
+		}
+		res = append(res, byte(c))
+	}
+	return string(res)
+}
+
+func toInt64(n any) int64 {
+	switch v := n.(type) {
+	case int:
+		return int64(v)
+	case int64:
+		return v
+	case float64:
+		return int64(v)
+	case float32:
+		return int64(v)
+	default:
+		return 0
+	}
+}
+
 func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRenderer, error) {
 	tr := &TemplateRenderer{
 		templates:    make(map[string]*template.Template),
@@ -28,58 +55,43 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 
 	funcMap := template.FuncMap{
 		"formatPrice": func(n int64) string {
-			s := fmt.Sprintf("%d", n)
-			var res []byte
-			for i, c := range s {
-				if i > 0 && (len(s)-i)%3 == 0 {
-					res = append(res, ',')
-				}
-				res = append(res, byte(c))
-			}
-			return string(res)
+			return formatCommaNumber(n)
 		},
 		"formatMXN": func(n any) string {
-			var val float64
-			switch v := n.(type) {
-			case int:
-				val = float64(v)
-			case int64:
-				val = float64(v)
-			case float64:
-				val = v
-			default:
-				return fmt.Sprintf("$%v MXN", n)
-			}
-			return services.FormatMXN(val)
+			val := toInt64(n)
+			return fmt.Sprintf("$%s MXN", formatCommaNumber(val))
 		},
 		"formatUSD": func(n any) string {
-			var val float64
-			switch v := n.(type) {
-			case int:
-				val = float64(v)
-			case int64:
-				val = float64(v)
-			case float64:
-				val = v
-			default:
-				return fmt.Sprintf("$%v USD", n)
-			}
+			val := toInt64(n)
 			rate := 20.0
 			if currencySvc != nil && currencySvc.Rate() > 0 {
 				rate = currencySvc.Rate()
 			}
-			return services.FormatUSD(val / rate)
+			usd := int64(float64(val) / rate)
+			return fmt.Sprintf("$%s USD", formatCommaNumber(usd))
+		},
+		"convertToUSD": func(n any) string {
+			val := toInt64(n)
+			rate := 20.0
+			if currencySvc != nil && currencySvc.Rate() > 0 {
+				rate = currencySvc.Rate()
+			}
+			usd := int64(float64(val) / rate)
+			return fmt.Sprintf("$%s USD", formatCommaNumber(usd))
+		},
+		"convertMXNToUSD": func(n any) float64 {
+			val := float64(toInt64(n))
+			rate := 20.0
+			if currencySvc != nil && currencySvc.Rate() > 0 {
+				rate = currencySvc.Rate()
+			}
+			return val / rate
+		},
+		"formatNumber": func(n any) string {
+			return formatCommaNumber(toInt64(n))
 		},
 		"formatArea": func(n int) string {
-			s := fmt.Sprintf("%d", n)
-			var res []byte
-			for i, c := range s {
-				if i > 0 && (len(s)-i)%3 == 0 {
-					res = append(res, ',')
-				}
-				res = append(res, byte(c))
-			}
-			return string(res)
+			return formatCommaNumber(int64(n))
 		},
 		"formatDate": func(t time.Time) string {
 			return t.Format("02 Jan 2006")
@@ -122,6 +134,18 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 		},
 		"add": func(a, b int) int { return a + b },
 		"sub": func(a, b int) int { return a - b },
+		"deref": func(s *string) string {
+			if s == nil {
+				return ""
+			}
+			return *s
+		},
+		"derefString": func(s *string) string {
+			if s == nil {
+				return ""
+			}
+			return *s
+		},
 		"dict": func(values ...any) (map[string]any, error) {
 			if len(values)%2 != 0 {
 				return nil, fmt.Errorf("dict requires even number of arguments")
