@@ -13,6 +13,9 @@
     </div>
 
     <form method="POST" action="/bienvenido/paso/1" class="wizard-form">
+        <!-- Secure CSRF Token -->
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
         <div class="wizard-options-grid">
             <label class="wizard-option-card">
                 <input type="radio" name="user_type" value="buyer" class="wizard-radio" required {{if eq .UserType "buyer"}}checked{{end}}>

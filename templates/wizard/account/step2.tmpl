@@ -1,88 +1,96 @@
-{{template "partials/nav.tmpl" .}}
+{{define "title"}}Datos de Contacto — Paso 2 de 2{{end}}
 
-<main class="wizard-page">
-    <div class="wizard-container">
-
-        <nav class="wizard-progress" aria-label="Progreso">
-            <ol class="wizard-steps">
-                {{range $step := .Steps}}
-                <li class="wizard-step-item{{if eq $step.Number $.Session.CurrentStep}} is-current{{end}}{{if lt $step.Number $.Session.CurrentStep}} is-complete{{end}}">
-                    <span class="wizard-step-number">{{$step.Number}}</span>
-                    <span class="wizard-step-label">{{$step.Title}}</span>
-                </li>
-                {{end}}
-            </ol>
-            <div class="wizard-progress-bar">
-                <div class="wizard-progress-fill" data-progress="{{.Session.Progress}}"></div>
-            </div>
-        </nav>
-
-        {{if .Error}}
-        <div class="wizard-alert wizard-alert-error" role="alert">
-            <span class="wizard-alert-icon">⚠️</span>
-            <span class="wizard-alert-text">{{.Error}}</span>
-        </div>
-        {{end}}
-
-        <div class="wizard-autosave" data-wizard-autosave>
-            <span class="wizard-autosave-dot"></span>
-            <span class="wizard-autosave-text">Borrador guardado</span>
-        </div>
-
-        <h1 class="wizard-step-heading">¿Cómo te contactan?</h1>
-        <p class="wizard-step-description">Tú decides qué información es visible en tus anuncios. Puedes cambiar esto en cualquier momento desde tu perfil.</p>
-
-        <form method="POST" action="/bienvenido/paso/2" data-wizard-form data-autosave-url="/bienvenido/draft">
-
-            <div class="wizard-field">
-                <label class="wizard-label" for="phone">Teléfono</label>
-                <input class="wizard-input" type="tel" id="phone" name="phone"
-                       value="{{index .Data "phone"}}"
-                       placeholder="Ej. 951 123 4567">
-            </div>
-
-            <div class="wizard-field">
-                <label class="wizard-label" for="whatsapp">WhatsApp</label>
-                <input class="wizard-input" type="tel" id="whatsapp" name="whatsapp"
-                       value="{{index .Data "whatsapp"}}"
-                       placeholder="Ej. 52 951 123 4567 (con código de país)">
-                <span class="wizard-help">Incluye el código de país (52 para México) sin el signo +.</span>
-            </div>
-
-            <div class="wizard-field">
-                <label class="wizard-label">Privacidad de contacto</label>
-                <label class="wizard-checkbox-row">
-                    <input type="checkbox" name="show_phone" value="true"
-                           {{if eq (index .Data "show_phone") "true"}}checked{{end}}>
-                    <span>Mostrar mi teléfono en mis anuncios públicos</span>
-                </label>
-                <label class="wizard-checkbox-row">
-                    <input type="checkbox" name="show_whatsapp" value="true"
-                           {{if eq (index .Data "show_whatsapp") "true"}}checked{{end}}>
-                    <span>Mostrar mi botón de WhatsApp en mis anuncios</span>
-                </label>
-                <span class="wizard-help">Si no marcas ninguna opción, los interesados deberán iniciar sesión para contactarte.</span>
-            </div>
-
-            <div class="wizard-field">
-                <label class="wizard-label" for="municipality">¿Dónde vives?</label>
-                <select class="wizard-select" id="municipality" name="municipality">
-                    <option value="">Selecciona tu municipio…</option>
-                    {{range .Municipalities}}
-                    <option value="{{.}}" {{if eq . (index $.Data "municipality")}}selected{{end}}>{{.}}</option>
-                    {{end}}
-                </select>
-                <span class="wizard-help">Nos ayuda a mostrarte propiedades y servicios cercanos.</span>
-            </div>
-
-            <div class="wizard-nav">
-                <a href="/bienvenido/paso/1" class="wizard-btn wizard-btn-secondary">← Atrás</a>
-                <button type="submit" class="wizard-btn wizard-btn-primary">Completar configuración ✓</button>
-            </div>
-        </form>
-
+{{define "content"}}
+<div class="wizard-card">
+    <div class="wizard-progress">
+        <div class="wizard-progress-bar step-2-of-2"></div>
     </div>
-</main>
+    
+    <div class="wizard-header-block">
+        <span class="wizard-step-badge">Paso 2 de 2</span>
+        <h1 class="wizard-title">Completa tu Perfil Regional</h1>
+        <p class="wizard-subtitle">Establece tu municipio principal de operación y tus preferencias de contacto en Oaxaca.</p>
+    </div>
 
-<script src="/static/js/wizard.js" defer></script>
-{{template "partials/footer.tmpl" .}}
+    <form method="POST" action="/bienvenido/paso/2" class="wizard-form">
+        <!-- Secure CSRF Token -->
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+        <!-- Display Name -->
+        <div class="form-group mb-4">
+            <label for="display_name" class="form-label font-semibold text-slate-700">Nombre de Mostrar o Razón Social</label>
+            <input type="text" id="display_name" name="display_name" class="form-control" placeholder="Ej. Inmobiliaria Antequera o Ing. Pérez" required value="{{if .DisplayName}}{{.DisplayName}}{{end}}">
+            <span class="form-help text-xs text-slate-400">Este nombre será visible en todas tus propiedades y publicaciones públicas.</span>
+        </div>
+
+        <!-- Municipality Select dropdown -->
+        <div class="form-group mb-4">
+            <label for="municipality" class="form-label font-semibold text-slate-700">Municipio Principal</label>
+            <select id="municipality" name="municipality" class="form-select" required>
+                <option value="">Selecciona un municipio...</option>
+                <option value="Oaxaca de Juárez" {{if eq .Municipality "Oaxaca de Juárez"}}selected{{end}}>Oaxaca de Juárez</option>
+                <option value="San Felipe del Agua" {{if eq .Municipality "San Felipe del Agua"}}selected{{end}}>San Felipe del Agua</option>
+                <option value="Santa Cruz Xoxocotlán" {{if eq .Municipality "Santa Cruz Xoxocotlán"}}selected{{end}}>Santa Cruz Xoxocotlán</option>
+                <option value="San Antonio de la Cal" {{if eq .Municipality "San Antonio de la Cal"}}selected{{end}}>San Antonio de la Cal</option>
+                <option value="Santa Lucía del Camino" {{if eq .Municipality "Santa Lucía del Camino"}}selected{{end}}>Santa Lucía del Camino</option>
+                <option value="San Sebastián Tutla" {{if eq .Municipality "San Sebastián Tutla"}}selected{{end}}>San Sebastián Tutla</option>
+                <option value="Santa María del Tule" {{if eq .Municipality "Santa María del Tule"}}selected{{end}}>Santa María del Tule</option>
+                <option value="Tlalixtac de Cabrera" {{if eq .Municipality "Tlalixtac de Cabrera"}}selected{{end}}>Tlalixtac de Cabrera</option>
+                <option value="San Agustín Yatareni" {{if eq .Municipality "San Agustín Yatareni"}}selected{{end}}>San Agustín Yatareni</option>
+                <option value="San Andrés Huayápam" {{if eq .Municipality "San Andrés Huayápam"}}selected{{end}}>San Andrés Huayápam</option>
+                <option value="Santa María Atzompa" {{if eq .Municipality "Santa María Atzompa"}}selected{{end}}>Santa María Atzompa</option>
+                <option value="San Jacinto Amilpas" {{if eq .Municipality "San Jacinto Amilpas"}}selected{{end}}>San Jacinto Amilpas</option>
+                <option value="San Pablo Etla" {{if eq .Municipality "San Pablo Etla"}}selected{{end}}>San Pablo Etla</option>
+                <option value="Villa de Etla" {{if eq .Municipality "Villa de Etla"}}selected{{end}}>Villa de Etla</option>
+                <option value="San Agustín Etla" {{if eq .Municipality "San Agustín Etla"}}selected{{end}}>San Agustín Etla</option>
+                <option value="Guadalupe Etla" {{if eq .Municipality "Guadalupe Etla"}}selected{{end}}>Guadalupe Etla</option>
+                <option value="Nazareno Etla" {{if eq .Municipality "Nazareno Etla"}}selected{{end}}>Nazareno Etla</option>
+                <option value="Reyes Etla" {{if eq .Municipality "Reyes Etla"}}selected{{end}}>Reyes Etla</option>
+                <option value="Santo Domingo Tomaltepec" {{if eq .Municipality "Santo Domingo Tomaltepec"}}selected{{end}}>Santo Domingo Tomaltepec</option>
+                <option value="Villa de Zaachila" {{if eq .Municipality "Villa de Zaachila"}}selected{{end}}>Villa de Zaachila</option>
+                <option value="Cuilápam de Guerrero" {{if eq .Municipality "Cuilápam de Guerrero"}}selected{{end}}>Cuilápam de Guerrero</option>
+                <option value="San Bartolo Coyotepec" {{if eq .Municipality "San Bartolo Coyotepec"}}selected{{end}}>San Bartolo Coyotepec</option>
+                <option value="Santa María Coyotepec" {{if eq .Municipality "Santa María Coyotepec"}}selected{{end}}>Santa María Coyotepec</option>
+                <option value="San Raymundo Jalpan" {{if eq .Municipality "San Raymundo Jalpan"}}selected{{end}}>San Raymundo Jalpan</option>
+                <option value="Ocotlán de Morelos" {{if eq .Municipality "Ocotlán de Morelos"}}selected{{end}}>Ocotlán de Morelos</option>
+                <option value="Tlacolula de Matamoros" {{if eq .Municipality "Tlacolula de Matamoros"}}selected{{end}}>Tlacolula de Matamoros</option>
+                <option value="San Jerónimo Tlacochahuaya" {{if eq .Municipality "San Jerónimo Tlacochahuaya"}}selected{{end}}>San Jerónimo Tlacochahuaya</option>
+                <option value="Villa de Mitla" {{if eq .Municipality "Villa de Mitla"}}selected{{end}}>Villa de Mitla</option>
+                <option value="Zimatlán de Álvarez" {{if eq .Municipality "Zimatlán de Álvarez"}}selected{{end}}>Zimatlán de Álvarez</option>
+            </select>
+        </div>
+
+        <!-- Phone & WhatsApp Section -->
+        <div class="row">
+            <div class="col-6 mb-4">
+                <label for="phone" class="form-label font-semibold text-slate-700">Teléfono de Contacto</label>
+                <input type="tel" id="phone" name="phone" class="form-control" placeholder="Ej. 951 123 4567" value="{{if .Phone}}{{.Phone}}{{end}}">
+            </div>
+            <div class="col-6 mb-4">
+                <label for="whatsapp" class="form-label font-semibold text-slate-700">WhatsApp Directo</label>
+                <input type="tel" id="whatsapp" name="whatsapp" class="form-control" placeholder="Ej. 951 123 4567" value="{{if .WhatsApp}}{{.WhatsApp}}{{end}}">
+            </div>
+        </div>
+
+        <!-- Privacy Toggles -->
+        <div class="wizard-privacy-box bg-slate-50 border border-slate-200 p-4 rounded-lg mb-4">
+            <h3 class="text-sm font-semibold text-slate-800 mb-3">Preferencias de Privacidad</h3>
+            
+            <label class="flex items-center gap-3 mb-3 cursor-pointer">
+                <input type="checkbox" name="show_phone" class="form-checkbox" value="1" {{if .ShowPhone}}checked{{end}}>
+                <span class="text-sm text-slate-600">Mostrar mi número telefónico en los listados públicos</span>
+            </label>
+
+            <label class="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" name="show_whatsapp" class="form-checkbox" value="1" {{if .ShowWhatsApp}}checked{{end}}>
+                <span class="text-sm text-slate-600">Mostrar botón de WhatsApp en los listados públicos</span>
+            </label>
+        </div>
+
+        <div class="wizard-actions">
+            <a href="/bienvenido/paso/1" class="btn btn-secondary mr-2">&larr; Atrás</a>
+            <button type="submit" class="btn btn-primary">Completar Registro &rarr;</button>
+        </div>
+    </form>
+</div>
+{{end}}
