@@ -1,31 +1,39 @@
 {{define "wizard/base"}}<!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{template "title" .}} — Valles Centrales</title>
-    <!-- Load design tokens, resets, utilities and wizard css in sequence -->
-    <link rel="stylesheet" href="/static/css/tokens.css?v={{.AssetVersion}}">
-    <link rel="stylesheet" href="/static/css/reset.css?v={{.AssetVersion}}">
-    <link rel="stylesheet" href="/static/css/fonts.css?v={{.AssetVersion}}">
-    <link rel="stylesheet" href="/static/css/utilities.css?v={{.AssetVersion}}">
-    <link rel="stylesheet" href="/static/css/wizard.css?v={{.AssetVersion}}">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>{{if .Title}}{{.Title}} — {{end}}Valles Centrales</title>
+  <link rel="stylesheet" href="/static/css/tokens.css?v={{.AssetVersion}}">
+  <link rel="stylesheet" href="/static/css/reset.css?v={{.AssetVersion}}">
+  <link rel="stylesheet" href="/static/css/fonts.css?v={{.AssetVersion}}">
+  <link rel="stylesheet" href="/static/css/utilities.css?v={{.AssetVersion}}">
+  <link rel="stylesheet" href="/static/css/wizard.css?v={{.AssetVersion}}">
 </head>
 <body class="wizard-body">
-    <header class="wizard-header">
-        <div class="container wizard-header-inner">
-            <a href="/" class="brand-logo" aria-label="Valles Centrales">
-                <span class="brand-text">Valles Centrales</span>
-            </a>
-            <a href="/" class="wizard-exit-btn">Salir</a>
-        </div>
-    </header>
+  <header class="wizard-header">
+    <div class="wizard-header-inner">
+      <a href="/" class="wizard-brand" aria-label="Inicio">
+        <svg class="wizard-brand-icon" width="20" height="20" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <path d="M16 3L3 14H7V27H13V19H19V27H25V14H29L16 3Z" fill="currentColor"/>
+        </svg>
+        <span class="wizard-brand-text">Valles Centrales</span>
+      </a>
+      <a href="/cuenta" class="wizard-exit-btn" title="Guardar y salir">
+        <span>Guardar y salir</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </a>
+    </div>
+  </header>
 
-    <main class="wizard-main">
-        <div class="container wizard-container">
-            {{template "content" .}}
-        </div>
-    </main>
+  <main class="wizard-main">
+    <div class="wizard-container">
+      {{template "content" .}}
+    </div>
+  </main>
 </body>
 </html>
 {{end}}

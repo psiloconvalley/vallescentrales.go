@@ -52,12 +52,14 @@ func NewDBPool(ctx context.Context, cfg *Config) (*pgxpool.Pool, error) {
 
 // runMigrations discovers and executes all pending SQL migrations in migrations/
 func runMigrations(ctx context.Context, pool *pgxpool.Pool) error {
-	// 1. Ensure schema tracking table exists
+	// 1. Ensure schema tracking table exists and has all required columns
 	createSchemaTable := `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			filename VARCHAR(255) PRIMARY KEY,
 			applied_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 		);
+		ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS filename VARCHAR(255) DEFAULT '';
+		ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS applied_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
 	`
 	if _, err := pool.Exec(ctx, createSchemaTable); err != nil {
 		return fmt.Errorf("failed to create schema_migrations table: %w", err)

@@ -1,70 +1,29 @@
-{{define "title"}}Bienvenido — Paso 1 de 2{{end}}
-
 {{define "content"}}
 <div class="wizard-card">
-    <div class="wizard-progress">
-        <div class="wizard-progress-bar step-1-of-2"></div>
-    </div>
-    
-    <div class="wizard-header-block">
-        <span class="wizard-step-badge">Paso 1 de 2</span>
-        <h1 class="wizard-title">¿Cómo planeas usar Valles Centrales?</h1>
-        <p class="wizard-subtitle">Personalizaremos tu experiencia según tus necesidades en la región de Oaxaca.</p>
-    </div>
+  <!-- Progress Header -->
+  <div class="wizard-progress-header">
+    <div class="wizard-step-pill">Paso 1 de 2</div>
+    <span class="wizard-step-label">Tipo de Perfil</span>
+  </div>
+  <div class="wizard-progress-track">
+    <div class="wizard-progress-bar step-1-of-2"></div>
+  </div>
 
-    <form method="POST" action="/bienvenido/paso/1" class="wizard-form">
-        <!-- Secure CSRF Token -->
-        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+  <div class="wizard-header-block">
+    <h1 class="wizard-title">¿Cómo usarás la plataforma?</h1>
+    <p class="wizard-subtitle">Selecciona tu rol principal para personalizar tu experiencia.</p>
+  </div>
 
-        <div class="wizard-options-grid">
-            <label class="wizard-option-card">
-                <input type="radio" name="user_type" value="buyer" class="wizard-radio" required {{if eq .UserType "buyer"}}checked{{end}}>
-                <div class="wizard-option-content">
-                    <div class="wizard-option-icon">🔍</div>
-                    <div class="wizard-option-text">
-                        <h3 class="wizard-option-title">Comprador / Inversionista</h3>
-                        <p class="wizard-option-desc">Busco comprar o rentar casas, departamentos o terrenos en Valles Centrales.</p>
-                    </div>
-                </div>
-            </label>
+  <form method="POST" action="/bienvenido/paso/1" class="wizard-form" id="wizard-form">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
-            <label class="wizard-option-card">
-                <input type="radio" name="user_type" value="owner" class="wizard-radio" {{if eq .UserType "owner"}}checked{{end}}>
-                <div class="wizard-option-content">
-                    <div class="wizard-option-icon">🏡</div>
-                    <div class="wizard-option-text">
-                        <h3 class="wizard-option-title">Propietario Particular</h3>
-                        <p class="wizard-option-desc">Deseo publicar y promocionar mis propiedades directamente sin intermediarios.</p>
-                    </div>
-                </div>
-            </label>
-
-            <label class="wizard-option-card">
-                <input type="radio" name="user_type" value="agent" class="wizard-radio" {{if eq .UserType "agent"}}checked{{end}}>
-                <div class="wizard-option-content">
-                    <div class="wizard-option-icon">💼</div>
-                    <div class="wizard-option-text">
-                        <h3 class="wizard-option-title">Asesor Inmobiliario</h3>
-                        <p class="wizard-option-desc">Soy profesional independiente administrando inventario en Oaxaca.</p>
-                    </div>
-                </div>
-            </label>
-
-            <label class="wizard-option-card">
-                <input type="radio" name="user_type" value="agency" class="wizard-radio" {{if eq .UserType "agency"}}checked{{end}}>
-                <div class="wizard-option-content">
-                    <div class="wizard-option-icon">🏢</div>
-                    <div class="wizard-option-text">
-                        <h3 class="wizard-option-title">Agencia Inmobiliaria</h3>
-                        <p class="wizard-option-desc">Represento una inmobiliaria o desarrolladora con equipo de ventas.</p>
-                    </div>
-                </div>
-            </label>
-        </div>
-
-        <div class="wizard-actions">
-            <button type="submit" class="btn btn-primary btn-lg">Continuar al Paso 2 &rarr;</button>
-        </div>
-    </form>
-</div>
-{{end}}
+    <div class="wizard-options-grid">
+      <!-- Option 1: Owner -->
+      <label class="wizard-option-card">
+        <input type="radio" name="user_type" value="owner" class="wizard-radio"
+          {{if or (eq .Session.Data.user_type "owner") (not .Session.Data.user_type)}}checked{{end}}>
+        <div class="wizard-option-content">
+          <div class="wizard-option-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 
