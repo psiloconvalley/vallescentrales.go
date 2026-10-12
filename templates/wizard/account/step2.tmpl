@@ -1,4 +1,4 @@
-{{define "title"}}Paso 2 de 2: Contacto | Valles Centrales{{end}}
+{{define "title"}}Paso 2 de 2 | Valles Centrales{{end}}
 
 {{define "content"}}
 <div class="wizard-card">
@@ -8,8 +8,8 @@
 
     <div class="wizard-header-block">
         <span class="wizard-step-badge">Paso 2 de 2</span>
-        <h1 class="wizard-title">Completa tu perfil regional</h1>
-        <p class="wizard-subtitle">Establece tu municipio principal de operación y tus preferencias de contacto en Oaxaca.</p>
+        <h1 class="wizard-title">¿Cómo te encuentran?</h1>
+        <p class="wizard-subtitle">Para que la gente te pueda contactar.</p>
     </div>
 
     <form method="POST" action="/bienvenido/paso/2" class="wizard-form">
@@ -17,36 +17,36 @@
 
         <!-- Display Name -->
         <div class="wizard-field">
-            <label for="display_name" class="wizard-label">Nombre de mostrar o razón social</label>
+            <label for="display_name" class="wizard-label">¿Cómo te llamas?</label>
             <input
                 type="text"
                 id="display_name"
                 name="display_name"
                 class="wizard-input"
-                placeholder="Ej. Inmobiliaria Antequera o Ing. Pérez"
+                placeholder="Tu nombre o el de tu negocio"
                 value="{{index .StepData "display_name"}}"
                 required>
-            <span class="wizard-help">Este nombre será visible en todas tus propiedades y publicaciones públicas.</span>
+            <span class="wizard-help">Así te verán en tus publicaciones.</span>
         </div>
 
         <!-- Municipality -->
         <div class="wizard-field">
-            <label for="municipality" class="wizard-label">Municipio principal</label>
+            <label for="municipality" class="wizard-label">¿Dónde estás?</label>
             <select id="municipality" name="municipality" class="wizard-select" required>
-                <option value="">Selecciona un municipio...</option>
+                <option value="">Elige tu municipio...</option>
                 {{$current := index .StepData "municipality"}}
                 {{range .Municipalities}}
                     <option value="{{.}}" {{if eq $current .}}selected{{end}}>{{.}}</option>
                 {{end}}
             </select>
-            <span class="wizard-help">Elige la zona de los Valles Centrales donde operas principalmente.</span>
+            <span class="wizard-help">Tu municipio en los Valles Centrales.</span>
         </div>
 
-        <!-- Phone & WhatsApp Row -->
+        <!-- Phone & WhatsApp -->
         <div class="wizard-row">
             <div class="wizard-col">
                 <div class="wizard-field">
-                    <label for="phone" class="wizard-label">Teléfono de contacto</label>
+                    <label for="phone" class="wizard-label">Teléfono</label>
                     <input
                         type="tel"
                         id="phone"
@@ -58,7 +58,7 @@
             </div>
             <div class="wizard-col">
                 <div class="wizard-field">
-                    <label for="whatsapp" class="wizard-label">WhatsApp directo</label>
+                    <label for="whatsapp" class="wizard-label">WhatsApp</label>
                     <input
                         type="tel"
                         id="whatsapp"
@@ -72,22 +72,22 @@
 
         <!-- Privacy Preferences -->
         <div class="wizard-privacy-box">
-            <h3 class="wizard-privacy-title">Preferencias de privacidad</h3>
+            <h3 class="wizard-privacy-title">¿Qué mostramos?</h3>
 
             <label class="wizard-check">
                 <input type="checkbox" name="show_phone" value="1" {{if index .StepData "show_phone"}}checked{{end}}>
-                <span>Mostrar mi número telefónico en los listados públicos</span>
+                <span>Mostrar mi teléfono en mis publicaciones</span>
             </label>
 
             <label class="wizard-check">
                 <input type="checkbox" name="show_whatsapp" value="1" {{if index .StepData "show_whatsapp"}}checked{{end}}>
-                <span>Mostrar botón de WhatsApp en los listados públicos</span>
+                <span>Mostrar botón de WhatsApp</span>
             </label>
         </div>
 
         <div class="wizard-actions">
             <a href="/bienvenido/paso/1" class="wizard-btn wizard-btn-secondary">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="19" y1="12" x2="5" y2="12"></line>
                     <polyline points="12 19 5 12 12 5"></polyline>
                 </svg>
@@ -95,8 +95,8 @@
             </a>
             <div class="wizard-actions-right">
                 <button type="submit" class="wizard-btn wizard-btn-primary wizard-btn-lg">
-                    <span>Completar registro</span>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <span>Terminar</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="20 6 9 17 4 12"></polyline>
                     </svg>
                 </button>
