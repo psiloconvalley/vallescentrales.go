@@ -60,30 +60,30 @@
             </select>
         </div>
 
-        <!-- Phone & WhatsApp Section -->
-        <div class="row">
-            <div class="col-6 mb-4">
+        <!-- Phone & WhatsApp Section Responsive Grid -->
+        <div class="wizard-row">
+            <div class="wizard-col">
                 <label for="phone" class="form-label font-semibold text-slate-700">Teléfono de Contacto</label>
                 <input type="tel" id="phone" name="phone" class="form-control" placeholder="Ej. 951 123 4567" value="{{if .Phone}}{{.Phone}}{{end}}">
             </div>
-            <div class="col-6 mb-4">
+            <div class="wizard-col">
                 <label for="whatsapp" class="form-label font-semibold text-slate-700">WhatsApp Directo</label>
                 <input type="tel" id="whatsapp" name="whatsapp" class="form-control" placeholder="Ej. 951 123 4567" value="{{if .WhatsApp}}{{.WhatsApp}}{{end}}">
             </div>
         </div>
 
         <!-- Privacy Toggles -->
-        <div class="wizard-privacy-box bg-slate-50 border border-slate-200 p-4 rounded-lg mb-4">
-            <h3 class="text-sm font-semibold text-slate-800 mb-3">Preferencias de Privacidad</h3>
+        <div class="wizard-privacy-box">
+            <h3>Preferencias de Privacidad</h3>
             
-            <label class="flex items-center gap-3 mb-3 cursor-pointer">
-                <input type="checkbox" name="show_phone" class="form-checkbox" value="1" {{if .ShowPhone}}checked{{end}}>
-                <span class="text-sm text-slate-600">Mostrar mi número telefónico en los listados públicos</span>
+            <label>
+                <input type="checkbox" name="show_phone" value="1" {{if .ShowPhone}}checked{{end}}>
+                <span>Mostrar mi número telefónico en los listados públicos</span>
             </label>
 
-            <label class="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" name="show_whatsapp" class="form-checkbox" value="1" {{if .ShowWhatsApp}}checked{{end}}>
-                <span class="text-sm text-slate-600">Mostrar botón de WhatsApp en los listados públicos</span>
+            <label>
+                <input type="checkbox" name="show_whatsapp" value="1" {{if .ShowWhatsApp}}checked{{end}}>
+                <span>Mostrar botón de WhatsApp en los listados públicos</span>
             </label>
         </div>
 
