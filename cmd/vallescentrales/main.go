@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/joho/godotenv"
+
 	"vallescentrales/internal/app"
 	"vallescentrales/internal/auth"
 	"vallescentrales/internal/handlers"
@@ -18,6 +20,17 @@ import (
 )
 
 func main() {
+	// Load environment file prior to logger configuration to read the correct APP_ENV & LOG_LEVEL
+	_ = godotenv.Load()
+
+	appEnv := os.Getenv("APP_ENV")
+	if appEnv == "" {
+		appEnv = "development"
+	}
+
+	// Bootstrap structured logging immediately before any logical operations
+	app.SetupLogger(appEnv)
+
 	ctx := context.Background()
 
 	cfg, err := app.LoadConfig()

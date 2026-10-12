@@ -74,25 +74,25 @@ func NewServer(
 }
 
 // setupMiddleware initializes the global HTTP middleware stack.
-// Zero in-app compression middleware — edge proxies (Railway/Cloudflare) handle compression natively.
 func (s *Server) setupMiddleware() {
 	s.router.Use(chimiddleware.RequestID)
 	s.router.Use(chimiddleware.RealIP)
-	s.router.Use(chimiddleware.Recoverer)
+	s.router.Use(middleware.PanicRecoverer)
 	s.router.Use(securityHeaders)
 	s.router.Use(s.authMW.LoadUser)
+	s.router.Use(middleware.RequestLogger)
 }
 
 // setupRoutes configures subdomain-aware routing, static assets, and health endpoints.
 func (s *Server) setupRoutes() {
-	// ─── Health & Readiness Endpoints (unauthenticated, globally accessible) ───
+	// Health & Readiness Endpoints
 	s.router.Get("/healthz", s.handleLiveness)
 	s.router.Get("/readyz", s.handleReadiness)
 
-	// ─── Static Assets (MIME-safe, cached) ───
+	// Static Assets
 	s.router.Handle("/static/*", http.StripPrefix("/static/", http.HandlerFunc(staticFileHandler)))
 
-	// ─── Subdomain Dispatcher ───
+	// Subdomain Dispatcher
 	s.router.HandleFunc("/*", s.subdomainDispatcher)
 }
 
@@ -306,6 +306,11 @@ func securityHeaders(next http.Handler) http.Handler {
 				"frame-ancestors 'none'; "+
 				"base-uri 'self'; "+
 				"form-action 'self';")
+
+		if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
+
 		next.ServeHTTP(w, r)
 	})
 }
@@ -319,7 +324,6 @@ func extractSubdomain(hostHeader, baseDomain string) string {
 	host = strings.ToLower(host)
 	base := strings.ToLower(baseDomain)
 
-	// Treat apex and www identically as the root hub
 	if host == base || host == "www."+base {
 		return ""
 	}
