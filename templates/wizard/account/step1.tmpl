@@ -1,9 +1,14 @@
 {{define "title"}}Paso 1: Tu Perfil | Valles Centrales{{end}}
 
 {{define "content"}}
-<div class="wizard-step-container">
-    <div class="wizard-header">
-        <span class="wizard-badge">Paso 1 de 3</span>
+<div class="wizard-card">
+    <!-- Active Progress Indicator -->
+    <div class="wizard-progress">
+        <div class="wizard-progress-bar step-1-of-3"></div>
+    </div>
+
+    <div class="wizard-header-block">
+        <span class="wizard-step-badge">Paso 1 de 3</span>
         <h1 class="wizard-title">¿Cómo planeas usar Valles Centrales?</h1>
         <p class="wizard-subtitle">Selecciona el rol que mejor describa tu actividad inmobiliaria en Oaxaca.</p>
     </div>
@@ -11,63 +16,63 @@
     <form method="POST" action="/bienvenido/paso/1" class="wizard-form" id="wizard-form">
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
-        <div class="role-grid">
+        <div class="wizard-options-grid">
             <!-- Option 1: Owner / Propietario -->
-            <label class="role-card {{if eq .Data.UserType "owner"}}selected{{end}}">
-                <input type="radio" name="user_type" value="owner" {{if eq .Data.UserType "owner"}}checked{{end}} required class="role-radio">
-                <div class="role-card-content">
-                    <div class="role-icon">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <label class="wizard-option-card">
+                <input type="radio" name="user_type" value="owner" {{if eq .Data.UserType "owner"}}checked{{end}} required class="wizard-radio">
+                <div class="wizard-option-content">
+                    <div class="wizard-option-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                             <polyline points="9 22 9 12 15 12 15 22"></polyline>
                         </svg>
                     </div>
-                    <div class="role-info">
-                        <h3 class="role-name">Propietario Particular</h3>
-                        <p class="role-desc">Quiero vender o rentar mis propias propiedades en los Valles Centrales.</p>
+                    <div class="wizard-option-text">
+                        <h3 class="wizard-option-title">Propietario Particular</h3>
+                        <p class="wizard-option-desc">Quiero vender o rentar mis propias propiedades en los Valles Centrales.</p>
                     </div>
                 </div>
             </label>
 
             <!-- Option 2: Agent / Asesor -->
-            <label class="role-card {{if eq .Data.UserType "agent"}}selected{{end}}">
-                <input type="radio" name="user_type" value="agent" {{if eq .Data.UserType "agent"}}checked{{end}} required class="role-radio">
-                <div class="role-card-content">
-                    <div class="role-icon">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <label class="wizard-option-card">
+                <input type="radio" name="user_type" value="agent" {{if eq .Data.UserType "agent"}}checked{{end}} required class="wizard-radio">
+                <div class="wizard-option-content">
+                    <div class="wizard-option-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
                             <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
                         </svg>
                     </div>
-                    <div class="role-info">
-                        <h3 class="role-name">Asesor / Agencia Inmobiliaria</h3>
-                        <p class="role-desc">Administro un portafolio de inmuebles para clientes y desarrollos.</p>
+                    <div class="wizard-option-text">
+                        <h3 class="wizard-option-title">Asesor / Agencia Inmobiliaria</h3>
+                        <p class="wizard-option-desc">Administro un portafolio de inmuebles para clientes y desarrollos.</p>
                     </div>
                 </div>
             </label>
 
             <!-- Option 3: Seeker / Buscador -->
-            <label class="role-card {{if eq .Data.UserType "seeker"}}selected{{end}}">
-                <input type="radio" name="user_type" value="seeker" {{if eq .Data.UserType "seeker"}}checked{{end}} required class="role-radio">
-                <div class="role-card-content">
-                    <div class="role-icon">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <label class="wizard-option-card">
+                <input type="radio" name="user_type" value="seeker" {{if eq .Data.UserType "seeker"}}checked{{end}} required class="wizard-radio">
+                <div class="wizard-option-content">
+                    <div class="wizard-option-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="11" cy="11" r="8"></circle>
                             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                         </svg>
                     </div>
-                    <div class="role-info">
-                        <h3 class="role-name">Buscador / Inversionista</h3>
-                        <p class="role-desc">Busco terrenos, casas o locales para comprar o rentar en la región.</p>
+                    <div class="wizard-option-text">
+                        <h3 class="wizard-option-title">Buscador / Inversionista</h3>
+                        <p class="wizard-option-desc">Busco terrenos, casas o locales para comprar o rentar en la región.</p>
                     </div>
                 </div>
             </label>
         </div>
 
         <div class="wizard-actions">
-            <button type="submit" class="btn btn-primary btn-lg">
+            <button type="submit" class="wizard-btn wizard-btn-primary wizard-btn-lg">
                 <span>Continuar</span>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                     <polyline points="12 5 19 12 12 19"></polyline>
                 </svg>

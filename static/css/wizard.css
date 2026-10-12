@@ -18,6 +18,23 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    max-width: 640px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.wizard-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #0f172a;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.wizard-brand-icon {
+    color: #0284c7;
 }
 
 .wizard-exit-btn {
@@ -28,6 +45,9 @@
     padding: 0.4rem 0.75rem;
     border-radius: 6px;
     border: 1px solid #cbd5e1;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
     transition: all 0.2s ease;
 }
 
@@ -41,11 +61,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1.5rem 1rem; /* Reduced mobile padding */
+    padding: 1.5rem 1rem;
 }
 
 .wizard-container {
-    max-width: 640px; /* Slightly more compact */
+    max-width: 640px;
     width: 100%;
     margin: 0 auto;
 }
@@ -54,7 +74,7 @@
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
-    padding: 1.5rem; /* Mobile-first padding */
+    padding: 1.5rem;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
@@ -72,8 +92,12 @@
     transition: width 0.3s ease;
 }
 
+/* Sane progress configurations for 2 and 3-step processes */
 .wizard-progress-bar.step-1-of-2 { width: 50%; }
 .wizard-progress-bar.step-2-of-2 { width: 100%; }
+.wizard-progress-bar.step-1-of-3 { width: 33.333%; }
+.wizard-progress-bar.step-2-of-3 { width: 66.666%; }
+.wizard-progress-bar.step-3-of-3 { width: 100%; }
 
 .wizard-header-block {
     margin-bottom: 1.5rem;
@@ -134,8 +158,10 @@
     margin-right: 0.75rem;
     width: 1.125rem;
     height: 1.125rem;
+    accent-color: #0284c7;
 }
 
+/* Elegant focus state highlighting */
 .wizard-option-card:has(.wizard-radio:checked) {
     border-color: #0284c7;
     background-color: #f0f9ff;
@@ -148,8 +174,16 @@
 }
 
 .wizard-option-icon {
-    font-size: 1.5rem;
-    line-height: 1;
+    color: #64748b;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 0.1rem;
+}
+
+.wizard-option-card:has(.wizard-radio:checked) .wizard-option-icon {
+    color: #0284c7;
 }
 
 .wizard-option-text {
@@ -169,58 +203,42 @@
     line-height: 1.35;
 }
 
-.wizard-privacy-box {
-    background-color: #f8fafc;
-    border: 1px solid #e2e8f0;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
-}
-
-.wizard-privacy-box h3 {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #334155;
-    margin-bottom: 0.75rem;
-}
-
-.wizard-privacy-box label {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.625rem;
-    cursor: pointer;
-    font-size: 0.8rem;
-    color: #475569;
-}
-
-.wizard-privacy-box label:not(:last-child) {
-    margin-bottom: 0.75rem;
-}
-
-.wizard-privacy-box input[type="checkbox"] {
-    margin-top: 0.125rem;
-    width: 1rem;
-    height: 1rem;
-}
-
-/* Row-Col Flex Grid Stacked by Default on Mobile */
-.wizard-row {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.wizard-col {
-    flex: 1;
-}
-
 .wizard-actions {
     display: flex;
     justify-content: flex-end;
     gap: 0.75rem;
     padding-top: 1.25rem;
     border-top: 1px solid #f1f5f9;
+}
+
+/* Beautiful custom button tokens */
+.wizard-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.wizard-btn-primary {
+    background-color: #0284c7;
+    color: #ffffff;
+}
+
+.wizard-btn-primary:hover {
+    background-color: #0369a1;
+}
+
+.wizard-btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 8px;
 }
 
 /* ==========================================================================
@@ -247,21 +265,11 @@
         padding: 1.25rem;
     }
 
-    .wizard-option-icon {
-        font-size: 1.75rem;
-    }
-
     .wizard-option-title {
         font-size: 1.05rem;
     }
 
     .wizard-option-desc {
         font-size: 0.85rem;
-    }
-
-    /* Convert row to side-by-side columns on larger screens */
-    .wizard-row {
-        flex-direction: row;
-        gap: 1.25rem;
     }
 }
