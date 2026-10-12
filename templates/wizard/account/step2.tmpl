@@ -1,95 +1,106 @@
-{{define "title"}}Datos de Contacto — Paso 2 de 2{{end}}
+{{define "title"}}Paso 2 de 2: Contacto | Valles Centrales{{end}}
 
 {{define "content"}}
 <div class="wizard-card">
     <div class="wizard-progress">
         <div class="wizard-progress-bar step-2-of-2"></div>
     </div>
-    
+
     <div class="wizard-header-block">
         <span class="wizard-step-badge">Paso 2 de 2</span>
-        <h1 class="wizard-title">Completa tu Perfil Regional</h1>
+        <h1 class="wizard-title">Completa tu perfil regional</h1>
         <p class="wizard-subtitle">Establece tu municipio principal de operación y tus preferencias de contacto en Oaxaca.</p>
     </div>
 
     <form method="POST" action="/bienvenido/paso/2" class="wizard-form">
-        <!-- Secure CSRF Token -->
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
         <!-- Display Name -->
-        <div class="form-group mb-4">
-            <label for="display_name" class="form-label font-semibold text-slate-700">Nombre de Mostrar o Razón Social</label>
-            <input type="text" id="display_name" name="display_name" class="form-control" placeholder="Ej. Inmobiliaria Antequera o Ing. Pérez" required value="{{if .DisplayName}}{{.DisplayName}}{{end}}">
-            <span class="form-help text-xs text-slate-400">Este nombre será visible en todas tus propiedades y publicaciones públicas.</span>
+        <div class="wizard-field">
+            <label for="display_name" class="wizard-label">Nombre de mostrar o razón social</label>
+            <input
+                type="text"
+                id="display_name"
+                name="display_name"
+                class="wizard-input"
+                placeholder="Ej. Inmobiliaria Antequera o Ing. Pérez"
+                value="{{index .StepData "display_name"}}"
+                required>
+            <span class="wizard-help">Este nombre será visible en todas tus propiedades y publicaciones públicas.</span>
         </div>
 
-        <!-- Municipality Select dropdown -->
-        <div class="form-group mb-4">
-            <label for="municipality" class="form-label font-semibold text-slate-700">Municipio Principal</label>
-            <select id="municipality" name="municipality" class="form-select" required>
+        <!-- Municipality -->
+        <div class="wizard-field">
+            <label for="municipality" class="wizard-label">Municipio principal</label>
+            <select id="municipality" name="municipality" class="wizard-select" required>
                 <option value="">Selecciona un municipio...</option>
-                <option value="Oaxaca de Juárez" {{if eq .Municipality "Oaxaca de Juárez"}}selected{{end}}>Oaxaca de Juárez</option>
-                <option value="San Felipe del Agua" {{if eq .Municipality "San Felipe del Agua"}}selected{{end}}>San Felipe del Agua</option>
-                <option value="Santa Cruz Xoxocotlán" {{if eq .Municipality "Santa Cruz Xoxocotlán"}}selected{{end}}>Santa Cruz Xoxocotlán</option>
-                <option value="San Antonio de la Cal" {{if eq .Municipality "San Antonio de la Cal"}}selected{{end}}>San Antonio de la Cal</option>
-                <option value="Santa Lucía del Camino" {{if eq .Municipality "Santa Lucía del Camino"}}selected{{end}}>Santa Lucía del Camino</option>
-                <option value="San Sebastián Tutla" {{if eq .Municipality "San Sebastián Tutla"}}selected{{end}}>San Sebastián Tutla</option>
-                <option value="Santa María del Tule" {{if eq .Municipality "Santa María del Tule"}}selected{{end}}>Santa María del Tule</option>
-                <option value="Tlalixtac de Cabrera" {{if eq .Municipality "Tlalixtac de Cabrera"}}selected{{end}}>Tlalixtac de Cabrera</option>
-                <option value="San Agustín Yatareni" {{if eq .Municipality "San Agustín Yatareni"}}selected{{end}}>San Agustín Yatareni</option>
-                <option value="San Andrés Huayápam" {{if eq .Municipality "San Andrés Huayápam"}}selected{{end}}>San Andrés Huayápam</option>
-                <option value="Santa María Atzompa" {{if eq .Municipality "Santa María Atzompa"}}selected{{end}}>Santa María Atzompa</option>
-                <option value="San Jacinto Amilpas" {{if eq .Municipality "San Jacinto Amilpas"}}selected{{end}}>San Jacinto Amilpas</option>
-                <option value="San Pablo Etla" {{if eq .Municipality "San Pablo Etla"}}selected{{end}}>San Pablo Etla</option>
-                <option value="Villa de Etla" {{if eq .Municipality "Villa de Etla"}}selected{{end}}>Villa de Etla</option>
-                <option value="San Agustín Etla" {{if eq .Municipality "San Agustín Etla"}}selected{{end}}>San Agustín Etla</option>
-                <option value="Guadalupe Etla" {{if eq .Municipality "Guadalupe Etla"}}selected{{end}}>Guadalupe Etla</option>
-                <option value="Nazareno Etla" {{if eq .Municipality "Nazareno Etla"}}selected{{end}}>Nazareno Etla</option>
-                <option value="Reyes Etla" {{if eq .Municipality "Reyes Etla"}}selected{{end}}>Reyes Etla</option>
-                <option value="Santo Domingo Tomaltepec" {{if eq .Municipality "Santo Domingo Tomaltepec"}}selected{{end}}>Santo Domingo Tomaltepec</option>
-                <option value="Villa de Zaachila" {{if eq .Municipality "Villa de Zaachila"}}selected{{end}}>Villa de Zaachila</option>
-                <option value="Cuilápam de Guerrero" {{if eq .Municipality "Cuilápam de Guerrero"}}selected{{end}}>Cuilápam de Guerrero</option>
-                <option value="San Bartolo Coyotepec" {{if eq .Municipality "San Bartolo Coyotepec"}}selected{{end}}>San Bartolo Coyotepec</option>
-                <option value="Santa María Coyotepec" {{if eq .Municipality "Santa María Coyotepec"}}selected{{end}}>Santa María Coyotepec</option>
-                <option value="San Raymundo Jalpan" {{if eq .Municipality "San Raymundo Jalpan"}}selected{{end}}>San Raymundo Jalpan</option>
-                <option value="Ocotlán de Morelos" {{if eq .Municipality "Ocotlán de Morelos"}}selected{{end}}>Ocotlán de Morelos</option>
-                <option value="Tlacolula de Matamoros" {{if eq .Municipality "Tlacolula de Matamoros"}}selected{{end}}>Tlacolula de Matamoros</option>
-                <option value="San Jerónimo Tlacochahuaya" {{if eq .Municipality "San Jerónimo Tlacochahuaya"}}selected{{end}}>San Jerónimo Tlacochahuaya</option>
-                <option value="Villa de Mitla" {{if eq .Municipality "Villa de Mitla"}}selected{{end}}>Villa de Mitla</option>
-                <option value="Zimatlán de Álvarez" {{if eq .Municipality "Zimatlán de Álvarez"}}selected{{end}}>Zimatlán de Álvarez</option>
+                {{$current := index .StepData "municipality"}}
+                {{range .Municipalities}}
+                    <option value="{{.}}" {{if eq $current .}}selected{{end}}>{{.}}</option>
+                {{end}}
             </select>
+            <span class="wizard-help">Elige la zona de los Valles Centrales donde operas principalmente.</span>
         </div>
 
-        <!-- Phone & WhatsApp Section Responsive Grid -->
+        <!-- Phone & WhatsApp Row -->
         <div class="wizard-row">
             <div class="wizard-col">
-                <label for="phone" class="form-label font-semibold text-slate-700">Teléfono de Contacto</label>
-                <input type="tel" id="phone" name="phone" class="form-control" placeholder="Ej. 951 123 4567" value="{{if .Phone}}{{.Phone}}{{end}}">
+                <div class="wizard-field">
+                    <label for="phone" class="wizard-label">Teléfono de contacto</label>
+                    <input
+                        type="tel"
+                        id="phone"
+                        name="phone"
+                        class="wizard-input"
+                        placeholder="951 123 4567"
+                        value="{{index .StepData "phone"}}">
+                </div>
             </div>
             <div class="wizard-col">
-                <label for="whatsapp" class="form-label font-semibold text-slate-700">WhatsApp Directo</label>
-                <input type="tel" id="whatsapp" name="whatsapp" class="form-control" placeholder="Ej. 951 123 4567" value="{{if .WhatsApp}}{{.WhatsApp}}{{end}}">
+                <div class="wizard-field">
+                    <label for="whatsapp" class="wizard-label">WhatsApp directo</label>
+                    <input
+                        type="tel"
+                        id="whatsapp"
+                        name="whatsapp"
+                        class="wizard-input"
+                        placeholder="951 123 4567"
+                        value="{{index .StepData "whatsapp"}}">
+                </div>
             </div>
         </div>
 
-        <!-- Privacy Toggles -->
+        <!-- Privacy Preferences -->
         <div class="wizard-privacy-box">
-            <h3>Preferencias de Privacidad</h3>
-            
-            <label>
-                <input type="checkbox" name="show_phone" value="1" {{if .ShowPhone}}checked{{end}}>
+            <h3 class="wizard-privacy-title">Preferencias de privacidad</h3>
+
+            <label class="wizard-check">
+                <input type="checkbox" name="show_phone" value="1" {{if index .StepData "show_phone"}}checked{{end}}>
                 <span>Mostrar mi número telefónico en los listados públicos</span>
             </label>
 
-            <label>
-                <input type="checkbox" name="show_whatsapp" value="1" {{if .ShowWhatsApp}}checked{{end}}>
+            <label class="wizard-check">
+                <input type="checkbox" name="show_whatsapp" value="1" {{if index .StepData "show_whatsapp"}}checked{{end}}>
                 <span>Mostrar botón de WhatsApp en los listados públicos</span>
             </label>
         </div>
 
         <div class="wizard-actions">
-            <a href="/bienvenido/paso/1" class="btn btn-secondary mr-2">&larr; Atrás</a>
-            <button type="submit" class="btn btn-primary">Completar Registro &rarr;</button>
+            <a href="/bienvenido/paso/1" class="wizard-btn wizard-btn-secondary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span>Atrás</span>
+            </a>
+            <div class="wizard-actions-right">
+                <button type="submit" class="wizard-btn wizard-btn-primary wizard-btn-lg">
+                    <span>Completar registro</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </button>
+            </div>
         </div>
     </form>
 </div>

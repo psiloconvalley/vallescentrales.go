@@ -92,7 +92,6 @@
     transition: width 0.3s ease;
 }
 
-/* Sane progress configurations for 2 and 3-step processes */
 .wizard-progress-bar.step-1-of-2 { width: 50%; }
 .wizard-progress-bar.step-2-of-2 { width: 100%; }
 .wizard-progress-bar.step-1-of-3 { width: 33.333%; }
@@ -161,7 +160,6 @@
     accent-color: #0284c7;
 }
 
-/* Elegant focus state highlighting */
 .wizard-option-card:has(.wizard-radio:checked) {
     border-color: #0284c7;
     background-color: #f0f9ff;
@@ -203,15 +201,128 @@
     line-height: 1.35;
 }
 
+/* ==========================================================================
+   Form Fields — Clean, Consistent Inputs
+   ========================================================================== */
+.wizard-field {
+    margin-bottom: 1.25rem;
+}
+
+.wizard-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 0.375rem;
+}
+
+.wizard-input,
+.wizard-select {
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.95rem;
+    color: #0f172a;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    font-family: inherit;
+}
+
+.wizard-input:focus,
+.wizard-select:focus {
+    outline: none;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.wizard-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2364748b'%3e%3cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.65rem center;
+    background-size: 1.25em;
+    padding-right: 2.5rem;
+}
+
+.wizard-help {
+    display: block;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-top: 0.375rem;
+    line-height: 1.4;
+}
+
+.wizard-row {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.wizard-col {
+    flex: 1;
+}
+
+/* ==========================================================================
+   Privacy / Checkbox Box
+   ========================================================================== */
+.wizard-privacy-box {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+}
+
+.wizard-privacy-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 0.75rem;
+}
+
+.wizard-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    cursor: pointer;
+    font-size: 0.825rem;
+    color: #475569;
+    line-height: 1.4;
+}
+
+.wizard-check + .wizard-check {
+    margin-top: 0.75rem;
+}
+
+.wizard-check input[type="checkbox"] {
+    margin-top: 0.125rem;
+    width: 1rem;
+    height: 1rem;
+    accent-color: #0284c7;
+    flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Action Buttons
+   ========================================================================== */
 .wizard-actions {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
     gap: 0.75rem;
     padding-top: 1.25rem;
     border-top: 1px solid #f1f5f9;
 }
 
-/* Beautiful custom button tokens */
+.wizard-actions-right {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
 .wizard-btn {
     display: inline-flex;
     align-items: center;
@@ -223,7 +334,9 @@
     border-radius: 6px;
     border: none;
     cursor: pointer;
+    text-decoration: none;
     transition: all 0.15s ease;
+    font-family: inherit;
 }
 
 .wizard-btn-primary {
@@ -233,6 +346,17 @@
 
 .wizard-btn-primary:hover {
     background-color: #0369a1;
+}
+
+.wizard-btn-secondary {
+    background-color: #ffffff;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+
+.wizard-btn-secondary:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
 }
 
 .wizard-btn-lg {
@@ -271,5 +395,10 @@
 
     .wizard-option-desc {
         font-size: 0.85rem;
+    }
+
+    .wizard-row {
+        flex-direction: row;
+        gap: 1.25rem;
     }
 }
