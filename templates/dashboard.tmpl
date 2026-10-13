@@ -5,7 +5,7 @@
     <div class="header-profile-summary">
       <div class="profile-avatar-wrapper">
         {{if .User.AvatarURL}}
-          <img src="{{.User.AvatarURL}}" alt="{{.User.DisplayNameOrFull}}" class="dashboard-user-avatar">
+          <img src="{{derefString .User.AvatarURL}}" alt="{{.User.DisplayNameOrFull}}" class="dashboard-user-avatar">
         {{else}}
           <div class="dashboard-user-avatar avatar-fallback">
             {{slice .User.DisplayNameOrFull 0 1}}
@@ -18,7 +18,7 @@
         <p class="welcome-subtitle">Administra tus publicaciones y estadísticas en tiempo real.</p>
       </div>
     </div>
-    
+
     <div class="header-actions">
       <a href="/cuenta/perfil" class="btn btn-outline">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
@@ -59,10 +59,8 @@
     </div>
     <div class="metric-card">
       <span class="metric-label">Tipo de Cuenta</span>
-      <span class="metric-value capitalize-text">
-        {{if eq .User.Role "agent"}}Agente{{else if eq .User.Role "owner"}}Propietario{{else}}{{.User.Role}}{{end}}
-      </span>
-      <span class="metric-subtext">Vendedor Verificado</span>
+      <span class="metric-value">{{userTypeLabel .User.UserType}}</span>
+      <span class="metric-subtext">Vendedor verificado</span>
     </div>
   </section>
 
@@ -79,8 +77,8 @@
           <div class="dashboard-property-card">
             <!-- Thumbnail Cover -->
             <div class="property-card-cover">
-              {{if .Photos}}
-                <img src="{{index .Photos 0}}" alt="{{.Title}}" loading="lazy">
+              {{if .PrimaryPhoto}}
+                <img src="{{.PrimaryPhoto.URL}}" alt="{{.Title}}" loading="lazy">
               {{else}}
                 <div class="cover-placeholder">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32" aria-hidden="true">
@@ -91,7 +89,7 @@
                 </div>
               {{end}}
               <div class="property-badge-layer">
-                <span class="badge badge-operation-sub badge-{{.OperationType}}">{{operationLabel .OperationType}}</span>
+                <span class="badge badge-operation-sub">{{operationLabel (printf "%s" .OperationType)}}</span>
               </div>
             </div>
 
@@ -100,7 +98,7 @@
               <div class="property-status-row">
                 <span class="status-indicator status-{{.Status}}">
                   <span class="status-dot"></span>
-                  {{if eq .Status "active"}}Activo{{else if eq .Status "draft"}}Borrador{{else if eq .Status "under_contract"}}Bajo Contrato{{else if eq .Status "sold"}}Vendido{{else}}{{.Status}}{{end}}
+                  {{statusLabel (printf "%s" .Status)}}
                 </span>
                 <span class="property-views">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true">
@@ -113,7 +111,7 @@
 
               <h3 class="property-card-title">{{.Title}}</h3>
               <p class="property-card-location">📍 {{.Municipality}}, Oaxaca</p>
-              <div class="property-card-price">{{formatPrice .Price .Currency}}</div>
+              <div class="property-card-price">{{formatMXN .PriceMXN}}</div>
 
               <!-- Sleek Flat Action Row -->
               <div class="property-card-actions">
