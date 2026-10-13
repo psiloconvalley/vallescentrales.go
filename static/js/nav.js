@@ -65,3 +65,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// ── Global Declarative Form Confirmations (CSP-Compliant) ──
+document.addEventListener('submit', function(e) {
+    var form = e.target;
+    var confirmMsg = form.getAttribute('data-confirm');
+    if (confirmMsg && !confirm(confirmMsg)) {
+        e.preventDefault();
+    }
+});

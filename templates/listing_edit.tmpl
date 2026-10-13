@@ -49,7 +49,7 @@
                     </form>
                     {{end}}
 
-                    <form method="POST" action="/propiedades/{{.Listing.Slug}}/eliminar" class="mt-2" onsubmit="return confirm('¿Seguro que deseas eliminar esta propiedad? Esta acción no se puede deshacer.')">
+                    <form method="POST" action="/propiedades/{{.Listing.Slug}}/eliminar" class="mt-2" data-confirm="¿Seguro que deseas eliminar esta propiedad? Esta acción no se puede deshacer.">
                         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
                         <button type="submit" class="btn btn-danger btn-block">Eliminar Publicación</button>
                     </form>

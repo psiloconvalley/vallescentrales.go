@@ -38,3 +38,27 @@
     white-space: nowrap;
     border-width: 0;
 }
+
+/* ─── CSP-Compliant Inline Replacements ─── */
+.d-inline              { display: inline; }
+.d-inline-block        { display: inline-block; }
+.font-semibold         { font-weight: 600; }
+.font-italic           { font-style: italic; }
+
+/* Avatar scaling for round profile images */
+.avatar-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+/* Max-width constrained paragraph for bios and descriptions */
+.max-w-prose {
+    max-width: 500px;
+}
+
+/* Accent-colored external link */
+.link-accent {
+    color: var(--accent);
+}

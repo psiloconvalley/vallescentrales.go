@@ -3,7 +3,7 @@
     <div class="profile-header mb-5">
         <div class="profile-avatar">
             {{if .Profile.AvatarURL}}
-                <img src="{{.Profile.AvatarURL}}" alt="{{.Profile.DisplayNameOrFull}}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+                <img src="{{.Profile.AvatarURL}}" alt="{{.Profile.DisplayNameOrFull}}" class="avatar-cover">
             {{else}}
                 {{.Profile.InitialLetter}}
             {{end}}
@@ -11,19 +11,19 @@
         <div class="profile-info">
             <h1>{{.Profile.DisplayNameOrFull}}</h1>
             {{if .Profile.AgencyName}}
-                <p class="text-muted" style="font-weight:600;">🏢 {{.Profile.AgencyName}}</p>
+                <p class="text-muted font-semibold">🏢 {{.Profile.AgencyName}}</p>
             {{end}}
             
             {{if .Profile.Bio}}
-                <p class="mt-2 text-muted" style="max-width: 500px; font-style: italic;">"{{.Profile.Bio}}"</p>
+                <p class="mt-2 text-muted max-w-prose font-italic">"{{.Profile.Bio}}"</p>
             {{end}}
 
-            <div class="d-flex gap-3 flex-wrap mt-3 font-sm" style="color: var(--text-light);">
+            <div class="flex gap-2 flex-wrap mt-3 text-sm text-light">
                 {{if .Profile.Location}}
                     <span>📍 {{.Profile.Location}}</span>
                 {{end}}
                 {{if .Profile.Website}}
-                    <span>🌐 <a href="{{.Profile.Website}}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);">{{.Profile.Website}}</a></span>
+                    <span>🌐 <a href="{{.Profile.Website}}" target="_blank" rel="noopener noreferrer" class="link-accent">{{.Profile.Website}}</a></span>
                 {{end}}
             </div>
         </div>
