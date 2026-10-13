@@ -13,6 +13,8 @@ import (
 	"vallescentrales/internal/services"
 
 	"github.com/justinas/nosurf"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type TemplateRenderer struct {
@@ -20,6 +22,10 @@ type TemplateRenderer struct {
 	assetVersion string
 	currencySvc  *services.CurrencyService
 }
+
+// titleCaser is the Unicode-aware replacement for the deprecated strings.Title.
+// Initialized once at package level for performance.
+var titleCaser = cases.Title(language.Spanish)
 
 func formatCommaNumber(n int64) string {
 	s := fmt.Sprintf("%d", n)
@@ -134,7 +140,7 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 			case "temporary_rent", "renta_temporal":
 				return "Renta Temporal"
 			default:
-				return strings.Title(s)
+				return titleCaser.String(s)
 			}
 		},
 		"propertyTypeLabel": func(s string) string {
@@ -152,7 +158,7 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 			case "ranch", "rancho":
 				return "Rancho / Finca"
 			default:
-				return strings.Title(s)
+				return titleCaser.String(s)
 			}
 		},
 		"statusLabel": func(s string) string {
@@ -170,7 +176,7 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 			case "archived", "archivado":
 				return "Archivado"
 			default:
-				return strings.Title(s)
+				return titleCaser.String(s)
 			}
 		},
 		"legalRegimeLabel": func(s string) string {
@@ -182,12 +188,12 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 			case "posesion", "possession_certificate":
 				return "Constancia de Posesión"
 			default:
-				return strings.Title(s)
+				return titleCaser.String(s)
 			}
 		},
 		"userTypeLabel": func(s string) string {
 			switch strings.ToLower(s) {
-			case "buyer":
+			case "buyer", "seeker":
 				return "Comprador / Inversionista"
 			case "owner":
 				return "Propietario Particular"
@@ -196,7 +202,7 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 			case "agency":
 				return "Agencia Inmobiliaria"
 			default:
-				return strings.Title(s)
+				return titleCaser.String(s)
 			}
 		},
 		"hasPrefix": strings.HasPrefix,
@@ -204,7 +210,7 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 		"contains":  strings.Contains,
 		"lower":     strings.ToLower,
 		"upper":     strings.ToUpper,
-		"title":     strings.Title,
+		"title":     titleCaser.String,
 		"seq": func(start, end int) []int {
 			var res []int
 			for i := start; i <= end; i++ {
@@ -318,8 +324,7 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 			return fmt.Errorf("parsing template %s: %w", path, err)
 		}
 
-		// Register under relative path (e.g. "wizard/account/step1.tmpl")
-		// and basename (e.g. "step1.tmpl") for flexible handler lookups
+		// Register under relative path and basename for flexible handler lookups
 		tr.templates[cleanRel] = tmpl
 		tr.templates[filepath.Base(path)] = tmpl
 

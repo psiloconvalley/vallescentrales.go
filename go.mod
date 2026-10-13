@@ -14,6 +14,7 @@ require (
 	github.com/justinas/nosurf v1.2.0
 	golang.org/x/crypto v0.53.0
 	golang.org/x/oauth2 v0.36.0
+	golang.org/x/text v0.38.0
 )
 
 require (
@@ -40,5 +41,4 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/sync v0.21.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
 )

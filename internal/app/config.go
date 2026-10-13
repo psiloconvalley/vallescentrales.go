@@ -11,7 +11,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -45,7 +44,6 @@ type Config struct {
 // LoadConfig loads and validates all environment variables.
 // AppEnv defaults to development. BaseDomain defaults based on environment.
 func LoadConfig() (*Config, error) {
-	_ = godotenv.Load()
 
 	appEnv := getEnv("APP_ENV", "development")
 
