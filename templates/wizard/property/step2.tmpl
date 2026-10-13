@@ -1,125 +1,110 @@
-{{template "partials/nav.tmpl" .}}
+{{define "title"}}Paso 2 de 3: Detalles | Valles Centrales{{end}}
 
-<main class="wizard-page">
-    <div class="wizard-container">
-
-        <nav class="wizard-progress" aria-label="Progreso">
-            <ol class="wizard-steps">
-                {{range $step := .Steps}}
-                <li class="wizard-step-item{{if eq $step.Number $.Session.CurrentStep}} is-current{{end}}{{if lt $step.Number $.Session.CurrentStep}} is-complete{{end}}">
-                    <span class="wizard-step-number">{{$step.Number}}</span>
-                    <span class="wizard-step-label">{{$step.Title}}</span>
-                </li>
-                {{end}}
-            </ol>
-            <div class="wizard-progress-bar">
-                <div class="wizard-progress-fill" data-progress="{{.Session.Progress}}"></div>
-            </div>
-        </nav>
-
-        {{if .Error}}
-        <div class="wizard-alert wizard-alert-error" role="alert">
-            <span class="wizard-alert-icon">⚠️</span>
-            <span class="wizard-alert-text">{{.Error}}</span>
-        </div>
-        {{end}}
-
-        <div class="wizard-autosave" data-wizard-autosave>
-            <span class="wizard-autosave-dot"></span>
-            <span class="wizard-autosave-text">Borrador guardado</span>
-        </div>
-
-        <h1 class="wizard-step-heading">Cuéntanos los detalles</h1>
-        <p class="wizard-step-description">Ubicación, precio y características de tu propiedad. Entre más completa la información, más rápido encontrarás comprador.</p>
-
-        <form method="POST" action="/publicar/paso/2" data-wizard-form data-autosave-url="/publicar/draft">
-
-            <div class="wizard-field">
-                <label class="wizard-label" for="municipality">Municipio *</label>
-                <select class="wizard-select" id="municipality" name="municipality" required>
-                    <option value="">Selecciona un municipio…</option>
-                    {{range .Municipalities}}
-                    <option value="{{.}}" {{if eq . (index $.Data "municipality")}}selected{{end}}>{{.}}</option>
-                    {{end}}
-                </select>
-            </div>
-
-            <div class="wizard-field">
-                <label class="wizard-label" for="neighborhood">Colonia / Barrio / Paraje</label>
-                <input class="wizard-input" type="text" id="neighborhood" name="neighborhood"
-                       value="{{index .Data "neighborhood"}}"
-                       placeholder="Ej. Barrio del Ex-Marquesado">
-            </div>
-
-            <div class="wizard-field">
-                <label class="wizard-label" for="address">Dirección o referencia</label>
-                <input class="wizard-input" type="text" id="address" name="address"
-                       value="{{index .Data "address"}}"
-                       placeholder="Ej. Calle Hidalgo #104, a 2 cuadras del templo">
-            </div>
-
-            <div class="wizard-field">
-                <label class="wizard-label" for="price">Precio *</label>
-                <div class="wizard-price-row">
-                    <input class="wizard-input" type="number" id="price" name="price"
-                           value="{{index .Data "price"}}"
-                           placeholder="1850000" min="1" step="any" required>
-                    <select class="wizard-select wizard-currency-select" name="currency">
-                        <option value="MXN" {{if eq (index .Data "currency") "MXN"}}selected{{end}} {{if not (index .Data "currency")}}selected{{end}}>MXN $</option>
-                        <option value="USD" {{if eq (index .Data "currency") "USD"}}selected{{end}}>USD $</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="wizard-field">
-                <label class="wizard-label">Dimensiones</label>
-                <div class="wizard-dimensions-grid">
-                    <div>
-                        <label class="wizard-help" for="lot_size_m2">Terreno (m²)</label>
-                        <input class="wizard-input" type="number" id="lot_size_m2" name="lot_size_m2"
-                               value="{{index .Data "lot_size_m2"}}" placeholder="0" min="0" step="any">
-                    </div>
-                    <div>
-                        <label class="wizard-help" for="construction_m2">Construcción (m²)</label>
-                        <input class="wizard-input" type="number" id="construction_m2" name="construction_m2"
-                               value="{{index .Data "construction_m2"}}" placeholder="0" min="0" step="any">
-                    </div>
-                    <div>
-                        <label class="wizard-help" for="bedrooms">Recámaras</label>
-                        <input class="wizard-input" type="number" id="bedrooms" name="bedrooms"
-                               value="{{index .Data "bedrooms"}}" placeholder="0" min="0">
-                    </div>
-                    <div>
-                        <label class="wizard-help" for="bathrooms">Baños</label>
-                        <input class="wizard-input" type="number" id="bathrooms" name="bathrooms"
-                               value="{{index .Data "bathrooms"}}" placeholder="0" min="0" step="0.5">
-                    </div>
-                </div>
-            </div>
-
-            <div class="wizard-field">
-                <label class="wizard-label" for="title">Título del anuncio *</label>
-                <input class="wizard-input" type="text" id="title" name="title"
-                       value="{{index .Data "title"}}"
-                       placeholder="Ej. Casa amplia con jardín en San Felipe del Agua"
-                       required minlength="5" maxlength="200">
-            </div>
-
-            <div class="wizard-field">
-                <label class="wizard-label" for="description">Descripción detallada *</label>
-                <textarea class="wizard-textarea" id="description" name="description"
-                          placeholder="Describe servicios (agua, luz, drenaje), accesos viales, acabados, facilidades de pago…"
-                          required minlength="20">{{index .Data "description"}}</textarea>
-            </div>
-
-            <div class="wizard-nav">
-                <a href="/publicar/paso/1" class="wizard-btn wizard-btn-secondary">← Atrás</a>
-                <button type="submit" class="wizard-btn wizard-btn-primary">Continuar →</button>
-            </div>
-        </form>
-
+{{define "content"}}
+<div class="wizard-card">
+    <div class="wizard-progress">
+        <div class="wizard-progress-bar step-2-of-3"></div>
     </div>
-</main>
 
-<script src="/static/js/wizard.js" defer></script>
-{{template "partials/footer.tmpl" .}}
+    <div class="wizard-header-block">
+        <span class="wizard-step-badge">Paso 2 de 3</span>
+        <h1 class="wizard-title">Dinos los detalles</h1>
+        <p class="wizard-subtitle">Ubicación, precio y lo que necesitan saber los interesados.</p>
+    </div>
+
+    <form method="POST" action="/publicar/paso/2" class="wizard-form" data-wizard-form data-autosave-url="/publicar/auto-save">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+        <!-- Title -->
+        <div class="wizard-field">
+            <label for="title" class="wizard-label">Título del anuncio</label>
+            <input type="text" id="title" name="title" class="wizard-input"
+                placeholder="Ej. Casa amplia con jardín en San Felipe del Agua"
+                value="{{index .StepData "title"}}"
+                required minlength="5" maxlength="200">
+            <span class="wizard-help">Sé claro y específico. Esto es lo primero que ven.</span>
+        </div>
+
+        <!-- Description -->
+        <div class="wizard-field">
+            <label for="description" class="wizard-label">Descripción</label>
+            <textarea id="description" name="description" class="wizard-input wizard-textarea"
+                placeholder="Describe la propiedad: servicios (agua, luz, drenaje), accesos, acabados..."
+                required minlength="20" rows="5">{{index .StepData "description"}}</textarea>
+            <span class="wizard-help">Entre más detalle, más confianza generas.</span>
+        </div>
+
+        <!-- Municipality -->
+        <div class="wizard-field">
+            <label for="municipality" class="wizard-label">Municipio</label>
+            <select id="municipality" name="municipality" class="wizard-select" required>
+                <option value="">Elige tu municipio...</option>
+                {{$current := index .StepData "municipality"}}
+                {{range .Municipalities}}
+                    <option value="{{.}}" {{if eq $current .}}selected{{end}}>{{.}}</option>
+                {{end}}
+            </select>
+        </div>
+
+        <!-- Community -->
+        <div class="wizard-field">
+            <label for="community" class="wizard-label">Colonia o localidad</label>
+            <input type="text" id="community" name="community" class="wizard-input"
+                placeholder="Ej. Barrio del Ex-Marquesado"
+                value="{{index .StepData "community"}}">
+            <span class="wizard-help">Opcional. Ayuda a los compradores a ubicarla rápido.</span>
+        </div>
+
+        <!-- Price -->
+        <div class="wizard-field">
+            <label for="price" class="wizard-label">Precio en pesos</label>
+            <input type="number" id="price" name="price" class="wizard-input"
+                placeholder="1,500,000"
+                value="{{index .StepData "price"}}"
+                required min="1" step="any">
+            <span class="wizard-help">Solo números. Sin comas ni símbolos.</span>
+        </div>
+
+        <!-- Dimensions Row -->
+        <div class="wizard-row">
+            <div class="wizard-col">
+                <div class="wizard-field">
+                    <label for="lot_size_m2" class="wizard-label">Terreno (m²)</label>
+                    <input type="number" id="lot_size_m2" name="lot_size_m2" class="wizard-input"
+                        placeholder="300"
+                        value="{{index .StepData "lot_size_m2"}}"
+                        min="0" step="any">
+                </div>
+            </div>
+            <div class="wizard-col">
+                <div class="wizard-field">
+                    <label for="construction_m2" class="wizard-label">Construcción (m²)</label>
+                    <input type="number" id="construction_m2" name="construction_m2" class="wizard-input"
+                        placeholder="150"
+                        value="{{index .StepData "construction_m2"}}"
+                        min="0" step="any">
+                </div>
+            </div>
+        </div>
+
+        <div class="wizard-actions">
+            <a href="/publicar/paso/1" class="wizard-btn wizard-btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span>Atrás</span>
+            </a>
+            <div class="wizard-actions-right">
+                <button type="submit" class="wizard-btn wizard-btn-primary wizard-btn-lg">
+                    <span>Siguiente</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{{end}}

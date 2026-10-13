@@ -1,135 +1,242 @@
-{{template "partials/nav.tmpl" .}}
+{{define "title"}}Paso 1 de 3: Tu propiedad | Valles Centrales{{end}}
 
-<main class="wizard-page">
-    <div class="wizard-container">
-
-        <nav class="wizard-progress" aria-label="Progreso">
-            <ol class="wizard-steps">
-                {{range $step := .Steps}}
-                <li class="wizard-step-item{{if eq $step.Number $.Session.CurrentStep}} is-current{{end}}{{if lt $step.Number $.Session.CurrentStep}} is-complete{{end}}">
-                    <span class="wizard-step-number">{{$step.Number}}</span>
-                    <span class="wizard-step-label">{{$step.Title}}</span>
-                </li>
-                {{end}}
-            </ol>
-            <div class="wizard-progress-bar">
-                <div class="wizard-progress-fill" data-progress="{{.Session.Progress}}"></div>
-            </div>
-        </nav>
-
-        {{if .Error}}
-        <div class="wizard-alert wizard-alert-error" role="alert">
-            <span class="wizard-alert-icon">⚠️</span>
-            <span class="wizard-alert-text">{{.Error}}</span>
-        </div>
-        {{end}}
-
-        <div class="wizard-autosave" data-wizard-autosave>
-            <span class="wizard-autosave-dot"></span>
-            <span class="wizard-autosave-text">Borrador guardado</span>
-        </div>
-
-        <h1 class="wizard-step-heading">¿Qué quieres publicar?</h1>
-        <p class="wizard-step-description">Selecciona el tipo de operación, inmueble y régimen jurídico de tu propiedad.</p>
-
-        <form method="POST" action="/publicar/paso/1" data-wizard-form data-autosave-url="/publicar/draft">
-
-            <div class="wizard-field">
-                <label class="wizard-label">Tipo de operación *</label>
-                <div class="wizard-choice-grid">
-                    <label class="wizard-choice-card">
-                        <input type="radio" name="operation_type" value="sale"
-                               {{if eq (index .Data "operation_type") "sale"}}checked{{end}}
-                               {{if not (index .Data "operation_type")}}checked{{end}}>
-                        <span class="wizard-choice-icon">🏷️</span>
-                        <span class="wizard-choice-label">Vender</span>
-                    </label>
-                    <label class="wizard-choice-card">
-                        <input type="radio" name="operation_type" value="rent"
-                               {{if eq (index .Data "operation_type") "rent"}}checked{{end}}>
-                        <span class="wizard-choice-icon">🔑</span>
-                        <span class="wizard-choice-label">Rentar</span>
-                    </label>
-                    <label class="wizard-choice-card">
-                        <input type="radio" name="operation_type" value="temporary_rental"
-                               {{if eq (index .Data "operation_type") "temporary_rental"}}checked{{end}}>
-                        <span class="wizard-choice-icon">📅</span>
-                        <span class="wizard-choice-label">Renta Temporal</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="wizard-field">
-                <label class="wizard-label">Tipo de inmueble *</label>
-                <div class="wizard-choice-grid">
-                    <label class="wizard-choice-card">
-                        <input type="radio" name="property_type" value="house"
-                               {{if eq (index .Data "property_type") "house"}}checked{{end}}
-                               {{if not (index .Data "property_type")}}checked{{end}}>
-                        <span class="wizard-choice-icon">🏡</span>
-                        <span class="wizard-choice-label">Casa</span>
-                    </label>
-                    <label class="wizard-choice-card">
-                        <input type="radio" name="property_type" value="apartment"
-                               {{if eq (index .Data "property_type") "apartment"}}checked{{end}}>
-                        <span class="wizard-choice-icon">🏢</span>
-                        <span class="wizard-choice-label">Departamento</span>
-                    </label>
-                    <label class="wizard-choice-card">
-                        <input type="radio" name="property_type" value="land"
-                               {{if eq (index .Data "property_type") "land"}}checked{{end}}>
-                        <span class="wizard-choice-icon">🌳</span>
-                        <span class="wizard-choice-label">Terreno</span>
-                    </label>
-                    <label class="wizard-choice-card">
-                        <input type="radio" name="property_type" value="commercial"
-                               {{if eq (index .Data "property_type") "commercial"}}checked{{end}}>
-                        <span class="wizard-choice-icon">🏪</span>
-                        <span class="wizard-choice-label">Comercial</span>
-                    </label>
-                    <label class="wizard-choice-card">
-                        <input type="radio" name="property_type" value="office"
-                               {{if eq (index .Data "property_type") "office"}}checked{{end}}>
-                        <span class="wizard-choice-icon">💼</span>
-                        <span class="wizard-choice-label">Oficina</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="wizard-field">
-                <label class="wizard-label">Régimen jurídico *</label>
-		<p class="wizard-help wizard-help-legal">La certeza jurídica es fundamental en Oaxaca. Selecciona el régimen que aplica a tu propiedad.</p>
-                <div class="wizard-choice-grid">
-                    <label class="wizard-choice-card">
-                        <input type="radio" name="legal_regime" value="escritura_publica"
-                               {{if eq (index .Data "legal_regime") "escritura_publica"}}checked{{end}}
-                               {{if not (index .Data "legal_regime")}}checked{{end}}>
-                        <span class="wizard-choice-icon">📜</span>
-                        <span class="wizard-choice-label">Escritura Pública</span>
-                    </label>
-                    <label class="wizard-choice-card">
-                        <input type="radio" name="legal_regime" value="comunal"
-                               {{if eq (index .Data "legal_regime") "comunal"}}checked{{end}}>
-                        <span class="wizard-choice-icon">🤝</span>
-                        <span class="wizard-choice-label">Comunal</span>
-                    </label>
-                    <label class="wizard-choice-card">
-                        <input type="radio" name="legal_regime" value="ejidal"
-                               {{if eq (index .Data "legal_regime") "ejidal"}}checked{{end}}>
-                        <span class="wizard-choice-icon">🌾</span>
-                        <span class="wizard-choice-label">Ejidal</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="wizard-nav">
-                <a href="/cuenta" class="wizard-btn wizard-btn-secondary">Cancelar</a>
-                <button type="submit" class="wizard-btn wizard-btn-primary">Continuar →</button>
-            </div>
-        </form>
-
+{{define "content"}}
+<div class="wizard-card">
+    <div class="wizard-progress">
+        <div class="wizard-progress-bar step-1-of-3"></div>
     </div>
-</main>
 
-<script src="/static/js/wizard.js" defer></script>
-{{template "partials/footer.tmpl" .}}
+    <div class="wizard-header-block">
+        <span class="wizard-step-badge">Paso 1 de 3</span>
+        <h1 class="wizard-title">¿Qué publicas?</h1>
+        <p class="wizard-subtitle">Cuéntanos lo básico sobre tu propiedad.</p>
+    </div>
+
+    <form method="POST" action="/publicar/paso/1" class="wizard-form" data-wizard-form data-autosave-url="/publicar/auto-save">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+        <!-- Operation Type -->
+        <div class="wizard-field">
+            <label class="wizard-label">¿Vendes o rentas?</label>
+            <div class="wizard-options-grid wizard-options-grid-2">
+                <label class="wizard-option-card">
+                    <input type="radio" name="operation_type" value="sale" required class="wizard-radio"
+                        {{if eq (index .StepData "operation_type") "sale"}}checked{{end}}>
+                    <div class="wizard-option-content">
+                        <div class="wizard-option-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="1" x2="12" y2="23"></line>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                        </div>
+                        <div class="wizard-option-text">
+                            <h3 class="wizard-option-title">Vender</h3>
+                            <p class="wizard-option-desc">Quiero venderla.</p>
+                        </div>
+                    </div>
+                </label>
+
+                <label class="wizard-option-card">
+                    <input type="radio" name="operation_type" value="rent" required class="wizard-radio"
+                        {{if eq (index .StepData "operation_type") "rent"}}checked{{end}}>
+                    <div class="wizard-option-content">
+                        <div class="wizard-option-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+                            </svg>
+                        </div>
+                        <div class="wizard-option-text">
+                            <h3 class="wizard-option-title">Rentar</h3>
+                            <p class="wizard-option-desc">Quiero rentarla.</p>
+                        </div>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Property Type -->
+        <div class="wizard-field">
+            <label class="wizard-label">¿Qué tipo de propiedad es?</label>
+            <div class="wizard-options-grid">
+                <label class="wizard-option-card">
+                    <input type="radio" name="property_type" value="land" required class="wizard-radio"
+                        {{if eq (index .StepData "property_type") "land"}}checked{{end}}>
+                    <div class="wizard-option-content">
+                        <div class="wizard-option-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 20h18M5 20V8l7-5 7 5v12"></path>
+                            </svg>
+                        </div>
+                        <div class="wizard-option-text">
+                            <h3 class="wizard-option-title">Terreno</h3>
+                            <p class="wizard-option-desc">Lote o parcela sin construir.</p>
+                        </div>
+                    </div>
+                </label>
+
+                <label class="wizard-option-card">
+                    <input type="radio" name="property_type" value="house" required class="wizard-radio"
+                        {{if eq (index .StepData "property_type") "house"}}checked{{end}}>
+                    <div class="wizard-option-content">
+                        <div class="wizard-option-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                            </svg>
+                        </div>
+                        <div class="wizard-option-text">
+                            <h3 class="wizard-option-title">Casa</h3>
+                            <p class="wizard-option-desc">Casa habitación.</p>
+                        </div>
+                    </div>
+                </label>
+
+                <label class="wizard-option-card">
+                    <input type="radio" name="property_type" value="rancho" required class="wizard-radio"
+                        {{if eq (index .StepData "property_type") "rancho"}}checked{{end}}>
+                    <div class="wizard-option-content">
+                        <div class="wizard-option-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                            </svg>
+                        </div>
+                        <div class="wizard-option-text">
+                            <h3 class="wizard-option-title">Rancho o finca</h3>
+                            <p class="wizard-option-desc">Terreno rústico con o sin construcción.</p>
+                        </div>
+                    </div>
+                </label>
+
+                <label class="wizard-option-card">
+                    <input type="radio" name="property_type" value="commercial" required class="wizard-radio"
+                        {{if eq (index .StepData "property_type") "commercial"}}checked{{end}}>
+                    <div class="wizard-option-content">
+                        <div class="wizard-option-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                <path d="M9 22V12h6v10"></path>
+                            </svg>
+                        </div>
+                        <div class="wizard-option-text">
+                            <h3 class="wizard-option-title">Local comercial</h3>
+                            <p class="wizard-option-desc">Para negocio u oficina.</p>
+                        </div>
+                    </div>
+                </label>
+
+                <label class="wizard-option-card">
+                    <input type="radio" name="property_type" value="cabin" required class="wizard-radio"
+                        {{if eq (index .StepData "property_type") "cabin"}}checked{{end}}>
+                    <div class="wizard-option-content">
+                        <div class="wizard-option-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M2 20h20L12 4z"></path>
+                                <path d="M8 20V13h8v7"></path>
+                            </svg>
+                        </div>
+                        <div class="wizard-option-text">
+                            <h3 class="wizard-option-title">Cabaña</h3>
+                            <p class="wizard-option-desc">Casa pequeña rústica o de descanso.</p>
+                        </div>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Legal Regime -->
+        <div class="wizard-field">
+            <label class="wizard-label">¿Cómo está la escritura?</label>
+            <p class="wizard-help">La certeza legal es lo primero que preguntan los compradores en Oaxaca.</p>
+            <div class="wizard-options-grid">
+                <label class="wizard-option-card">
+                    <input type="radio" name="legal_regime" value="escritura_publica" required class="wizard-radio"
+                        {{if eq (index .StepData "legal_regime") "escritura_publica"}}checked{{end}}>
+                    <div class="wizard-option-content">
+                        <div class="wizard-option-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="9" y1="15" x2="15" y2="15"></line>
+                            </svg>
+                        </div>
+                        <div class="wizard-option-text">
+                            <h3 class="wizard-option-title">Escritura pública</h3>
+                            <p class="wizard-option-desc">Escriturada ante notario público.</p>
+                        </div>
+                    </div>
+                </label>
+
+                <label class="wizard-option-card">
+                    <input type="radio" name="legal_regime" value="ejidal" required class="wizard-radio"
+                        {{if eq (index .StepData "legal_regime") "ejidal"}}checked{{end}}>
+                    <div class="wizard-option-content">
+                        <div class="wizard-option-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s-8-4-8-11a8 8 0 0 1 16 0c0 7-8 11-8 11z"></path>
+                                <circle cx="12" cy="11" r="3"></circle>
+                            </svg>
+                        </div>
+                        <div class="wizard-option-text">
+                            <h3 class="wizard-option-title">Ejidal</h3>
+                            <p class="wizard-option-desc">Tierra ejidal con derechos agrarios.</p>
+                        </div>
+                    </div>
+                </label>
+
+                <label class="wizard-option-card">
+                    <input type="radio" name="legal_regime" value="comunal" required class="wizard-radio"
+                        {{if eq (index .StepData "legal_regime") "comunal"}}checked{{end}}>
+                    <div class="wizard-option-content">
+                        <div class="wizard-option-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"></path>
+                                <circle cx="17" cy="7" r="4"></circle>
+                                <path d="M21 21v-2a4 4 0 0 0-3-3.87"></path>
+                            </svg>
+                        </div>
+                        <div class="wizard-option-text">
+                            <h3 class="wizard-option-title">Comunal</h3>
+                            <p class="wizard-option-desc">Tierra comunal con acta de asamblea.</p>
+                        </div>
+                    </div>
+                </label>
+
+                <label class="wizard-option-card">
+                    <input type="radio" name="legal_regime" value="posesion" required class="wizard-radio"
+                        {{if eq (index .StepData "legal_regime") "posesion"}}checked{{end}}>
+                    <div class="wizard-option-content">
+                        <div class="wizard-option-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                        </div>
+                        <div class="wizard-option-text">
+                            <h3 class="wizard-option-title">Constancia de posesión</h3>
+                            <p class="wizard-option-desc">Documento municipal o agrario.</p>
+                        </div>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <div class="wizard-actions">
+            <a href="/cuenta" class="wizard-btn wizard-btn-secondary">
+                <span>Cancelar</span>
+            </a>
+            <div class="wizard-actions-right">
+                <button type="submit" class="wizard-btn wizard-btn-primary wizard-btn-lg">
+                    <span>Siguiente</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{{end}}

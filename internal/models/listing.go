@@ -26,6 +26,22 @@ const (
 	TypeCabin      PropertyType = "cabin"
 )
 
+type OperationType string
+
+const (
+	OperationSale OperationType = "sale"
+	OperationRent OperationType = "rent"
+)
+
+type LegalRegime string
+
+const (
+	LegalEscrituraPublica LegalRegime = "escritura_publica"
+	LegalEjidal           LegalRegime = "ejidal"
+	LegalComunal          LegalRegime = "comunal"
+	LegalPosesion         LegalRegime = "posesion"
+)
+
 type Listing struct {
 	ID             uuid.UUID     `db:"id"              json:"id"`
 	OwnerID        uuid.UUID     `db:"owner_id"        json:"owner_id"`
@@ -33,6 +49,8 @@ type Listing struct {
 	Slug           string        `db:"slug"            json:"slug"`
 	Description    *string       `db:"description"     json:"description,omitempty"`
 	PropertyType   PropertyType  `db:"property_type"   json:"property_type"`
+	OperationType  OperationType `db:"operation_type"  json:"operation_type"`
+	LegalRegime    LegalRegime   `db:"legal_regime"    json:"legal_regime"`
 	Status         ListingStatus `db:"status"          json:"status"`
 	PriceMXN       float64       `db:"price_mxn"       json:"price_mxn"`
 	AreaM2         *float64      `db:"area_m2"         json:"area_m2,omitempty"`
@@ -75,6 +93,8 @@ func (l *Listing) PrimaryPhoto() *ListingMedia {
 func (l *Listing) CanPublish() bool {
 	return l.Title != "" &&
 		l.PropertyType != "" &&
+		l.OperationType != "" &&
+		l.LegalRegime != "" &&
 		l.PriceMXN > 0 &&
 		l.Municipality != ""
 }

@@ -448,3 +448,194 @@
         gap: var(--s2);
     }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TEXTAREA + 2-COLUMN GRID OVERRIDES
+   ══════════════════════════════════════════════════════════════════════════ */
+.wizard-textarea {
+    min-height: 120px;
+    resize: vertical;
+    font-family: var(--font-body);
+    line-height: 1.5;
+}
+
+.wizard-options-grid-2 {
+    grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 480px) {
+    .wizard-options-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PHOTO DROPZONE
+   ══════════════════════════════════════════════════════════════════════════ */
+.wizard-dropzone {
+    position: relative;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: var(--s4) var(--s2);
+    text-align: center;
+    cursor: pointer;
+    background-color: var(--bg);
+    transition: all 0.2s ease;
+    margin-bottom: var(--s3);
+}
+
+.wizard-dropzone:hover,
+.wizard-dropzone.is-dragging {
+    border-color: var(--accent);
+    background-color: var(--surface);
+}
+
+.wizard-dropzone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.wizard-dropzone-icon {
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.wizard-dropzone:hover .wizard-dropzone-icon,
+.wizard-dropzone.is-dragging .wizard-dropzone-icon {
+    color: var(--accent);
+}
+
+.wizard-dropzone-title {
+    font-family: var(--font-heading);
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--obsidian);
+    margin: 0;
+}
+
+.wizard-dropzone-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.wizard-dropzone-hint {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+}
+
+.wizard-dropzone-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PHOTO PREVIEW GRID (populated by wizard-photos.js)
+   ══════════════════════════════════════════════════════════════════════════ */
+.wizard-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: var(--s3);
+}
+
+.wizard-preview-card {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background-color: var(--bg);
+    border: 1.5px solid var(--border);
+    cursor: grab;
+    transition: all 0.15s ease;
+}
+
+.wizard-preview-card:hover {
+    border-color: var(--obsidian);
+    transform: translateY(-1px);
+}
+
+.wizard-preview-card.is-primary {
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(212, 118, 60, 0.15);
+}
+
+.wizard-preview-card.is-dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+.wizard-preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+}
+
+.wizard-preview-badge {
+    position: absolute;
+    top: 0.4rem;
+    left: 0.4rem;
+    background-color: var(--obsidian);
+    color: var(--surface);
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-full);
+    pointer-events: none;
+    letter-spacing: 0.03em;
+}
+
+.wizard-preview-card.is-primary .wizard-preview-badge {
+    background-color: var(--accent);
+}
+
+.wizard-preview-actions {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.4rem;
+    background: linear-gradient(to top, rgba(26, 36, 33, 0.75), transparent 60%);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.wizard-preview-card:hover .wizard-preview-actions {
+    opacity: 1;
+}
+
+.wizard-preview-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background-color: var(--surface);
+    color: var(--obsidian);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.wizard-preview-btn:hover {
+    background-color: var(--accent);
+    color: var(--surface);
+}
+
+.wizard-preview-btn-remove:hover {
+    background-color: var(--error);
+    color: var(--surface);
+}

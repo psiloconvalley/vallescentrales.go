@@ -15,16 +15,18 @@ import (
 )
 
 type ListFilter struct {
-	Municipality *string
-	PropertyType *models.PropertyType
-	MinPrice     *float64
-	MaxPrice     *float64
-	Status       *models.ListingStatus
-	Featured     *bool
-	OwnerID      *uuid.UUID
-	Page         int
-	PageSize     int
-	SortBy       string
+	Municipality  *string
+	PropertyType  *models.PropertyType
+	OperationType *models.OperationType
+	LegalRegime   *models.LegalRegime
+	MinPrice      *float64
+	MaxPrice      *float64
+	Status        *models.ListingStatus
+	Featured      *bool
+	OwnerID       *uuid.UUID
+	Page          int
+	PageSize      int
+	SortBy        string
 }
 
 type CreateInput struct {
@@ -33,6 +35,8 @@ type CreateInput struct {
 	Slug           string
 	Description    *string
 	PropertyType   models.PropertyType
+	OperationType  models.OperationType
+	LegalRegime    models.LegalRegime
 	PriceMXN       float64
 	AreaM2         *float64
 	ConstructionM2 *float64
@@ -50,16 +54,33 @@ func NewListingRepo(db *pgxpool.Pool) *ListingRepo {
 	return &ListingRepo{db: db}
 }
 
+// Column list reused across SELECT queries to keep schema evolution explicit.
+const listingSelectCols = `
+	id, owner_id, title, slug, description, property_type, operation_type, legal_regime, status,
+	price_mxn, area_m2, construction_m2, municipality, community,
+	latitude, longitude, is_featured, view_count, created_at, updated_at, published_at
+`
+
+// scanListing centralises the field order used across every SELECT.
+func scanListing(row pgx.Row, l *models.Listing) error {
+	return row.Scan(
+		&l.ID, &l.OwnerID, &l.Title, &l.Slug, &l.Description, &l.PropertyType,
+		&l.OperationType, &l.LegalRegime, &l.Status,
+		&l.PriceMXN, &l.AreaM2, &l.ConstructionM2, &l.Municipality, &l.Community,
+		&l.Latitude, &l.Longitude, &l.IsFeatured, &l.ViewCount, &l.CreatedAt, &l.UpdatedAt, &l.PublishedAt,
+	)
+}
+
 func (r *ListingRepo) Create(ctx context.Context, l *models.Listing) error {
 	query := `
 		INSERT INTO listings (
-			id, owner_id, title, slug, description, property_type, status,
+			id, owner_id, title, slug, description, property_type, operation_type, legal_regime, status,
 			price_mxn, area_m2, construction_m2, municipality, community,
 			latitude, longitude, is_featured, view_count, created_at, updated_at, published_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
 	`
 	_, err := r.db.Exec(ctx, query,
-		l.ID, l.OwnerID, l.Title, l.Slug, l.Description, l.PropertyType, l.Status,
+		l.ID, l.OwnerID, l.Title, l.Slug, l.Description, l.PropertyType, l.OperationType, l.LegalRegime, l.Status,
 		l.PriceMXN, l.AreaM2, l.ConstructionM2, l.Municipality, l.Community,
 		l.Latitude, l.Longitude, l.IsFeatured, l.ViewCount, l.CreatedAt, l.UpdatedAt, l.PublishedAt,
 	)
@@ -76,6 +97,15 @@ func (r *ListingRepo) CreateFromInput(ctx context.Context, input CreateInput) (*
 		listingSlug = slug.Generate(input.Title)
 	}
 
+	operation := input.OperationType
+	if operation == "" {
+		operation = models.OperationSale
+	}
+	regime := input.LegalRegime
+	if regime == "" {
+		regime = models.LegalEscrituraPublica
+	}
+
 	l := &models.Listing{
 		ID:             uuid.New(),
 		OwnerID:        input.OwnerID,
@@ -83,6 +113,8 @@ func (r *ListingRepo) CreateFromInput(ctx context.Context, input CreateInput) (*
 		Slug:           listingSlug,
 		Description:    input.Description,
 		PropertyType:   input.PropertyType,
+		OperationType:  operation,
+		LegalRegime:    regime,
 		Status:         models.StatusDraft,
 		PriceMXN:       input.PriceMXN,
 		AreaM2:         input.AreaM2,
@@ -127,6 +159,18 @@ func (r *ListingRepo) List(ctx context.Context, filter ListFilter) ([]*models.Li
 	if filter.PropertyType != nil && *filter.PropertyType != "" {
 		whereClauses = append(whereClauses, fmt.Sprintf("property_type = $%d", argIdx))
 		args = append(args, *filter.PropertyType)
+		argIdx++
+	}
+
+	if filter.OperationType != nil && *filter.OperationType != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("operation_type = $%d", argIdx))
+		args = append(args, *filter.OperationType)
+		argIdx++
+	}
+
+	if filter.LegalRegime != nil && *filter.LegalRegime != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("legal_regime = $%d", argIdx))
+		args = append(args, *filter.LegalRegime)
 		argIdx++
 	}
 
@@ -186,14 +230,12 @@ func (r *ListingRepo) List(ctx context.Context, filter ListFilter) ([]*models.Li
 	offset := (page - 1) * limit
 
 	query := fmt.Sprintf(`
-		SELECT id, owner_id, title, slug, description, property_type, status,
-		       price_mxn, area_m2, construction_m2, municipality, community,
-		       latitude, longitude, is_featured, view_count, created_at, updated_at, published_at
+		SELECT %s
 		FROM listings
 		%s
 		%s
 		LIMIT $%d OFFSET $%d
-	`, whereSQL, orderSQL, argIdx, argIdx+1)
+	`, listingSelectCols, whereSQL, orderSQL, argIdx, argIdx+1)
 
 	args = append(args, limit, offset)
 
@@ -206,12 +248,7 @@ func (r *ListingRepo) List(ctx context.Context, filter ListFilter) ([]*models.Li
 	var listings []*models.Listing
 	for rows.Next() {
 		var l models.Listing
-		err := rows.Scan(
-			&l.ID, &l.OwnerID, &l.Title, &l.Slug, &l.Description, &l.PropertyType, &l.Status,
-			&l.PriceMXN, &l.AreaM2, &l.ConstructionM2, &l.Municipality, &l.Community,
-			&l.Latitude, &l.Longitude, &l.IsFeatured, &l.ViewCount, &l.CreatedAt, &l.UpdatedAt, &l.PublishedAt,
-		)
-		if err != nil {
+		if err := scanListing(rows, &l); err != nil {
 			return nil, 0, fmt.Errorf("listing_repo: scan list: %w", err)
 		}
 
@@ -231,14 +268,17 @@ func (r *ListingRepo) Update(ctx context.Context, l *models.Listing) error {
 	query := `
 		UPDATE listings SET
 			title = $1, slug = $2, description = $3, property_type = $4,
-			status = $5, price_mxn = $6, area_m2 = $7, construction_m2 = $8,
-			municipality = $9, community = $10, latitude = $11, longitude = $12,
-			is_featured = $13, updated_at = $14, published_at = $15
-		WHERE id = $16
+			operation_type = $5, legal_regime = $6,
+			status = $7, price_mxn = $8, area_m2 = $9, construction_m2 = $10,
+			municipality = $11, community = $12, latitude = $13, longitude = $14,
+			is_featured = $15, updated_at = $16, published_at = $17
+		WHERE id = $18
 	`
 	_, err := r.db.Exec(ctx, query,
-		l.Title, l.Slug, l.Description, l.PropertyType, l.Status, l.PriceMXN,
-		l.AreaM2, l.ConstructionM2, l.Municipality, l.Community, l.Latitude, l.Longitude,
+		l.Title, l.Slug, l.Description, l.PropertyType,
+		l.OperationType, l.LegalRegime,
+		l.Status, l.PriceMXN, l.AreaM2, l.ConstructionM2,
+		l.Municipality, l.Community, l.Latitude, l.Longitude,
 		l.IsFeatured, l.UpdatedAt, l.PublishedAt, l.ID,
 	)
 	if err != nil {
@@ -248,19 +288,9 @@ func (r *ListingRepo) Update(ctx context.Context, l *models.Listing) error {
 }
 
 func (r *ListingRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.Listing, error) {
-	query := `
-		SELECT id, owner_id, title, slug, description, property_type, status,
-		       price_mxn, area_m2, construction_m2, municipality, community,
-		       latitude, longitude, is_featured, view_count, created_at, updated_at, published_at
-		FROM listings
-		WHERE id = $1
-	`
+	query := fmt.Sprintf(`SELECT %s FROM listings WHERE id = $1`, listingSelectCols)
 	var l models.Listing
-	err := r.db.QueryRow(ctx, query, id).Scan(
-		&l.ID, &l.OwnerID, &l.Title, &l.Slug, &l.Description, &l.PropertyType, &l.Status,
-		&l.PriceMXN, &l.AreaM2, &l.ConstructionM2, &l.Municipality, &l.Community,
-		&l.Latitude, &l.Longitude, &l.IsFeatured, &l.ViewCount, &l.CreatedAt, &l.UpdatedAt, &l.PublishedAt,
-	)
+	err := scanListing(r.db.QueryRow(ctx, query, id), &l)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, ErrNotFound
@@ -276,20 +306,10 @@ func (r *ListingRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.Listin
 	return &l, nil
 }
 
-func (r *ListingRepo) GetBySlug(ctx context.Context, slug string) (*models.Listing, error) {
-	query := `
-		SELECT id, owner_id, title, slug, description, property_type, status,
-		       price_mxn, area_m2, construction_m2, municipality, community,
-		       latitude, longitude, is_featured, view_count, created_at, updated_at, published_at
-		FROM listings
-		WHERE slug = $1
-	`
+func (r *ListingRepo) GetBySlug(ctx context.Context, s string) (*models.Listing, error) {
+	query := fmt.Sprintf(`SELECT %s FROM listings WHERE slug = $1`, listingSelectCols)
 	var l models.Listing
-	err := r.db.QueryRow(ctx, query, slug).Scan(
-		&l.ID, &l.OwnerID, &l.Title, &l.Slug, &l.Description, &l.PropertyType, &l.Status,
-		&l.PriceMXN, &l.AreaM2, &l.ConstructionM2, &l.Municipality, &l.Community,
-		&l.Latitude, &l.Longitude, &l.IsFeatured, &l.ViewCount, &l.CreatedAt, &l.UpdatedAt, &l.PublishedAt,
-	)
+	err := scanListing(r.db.QueryRow(ctx, query, s), &l)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, ErrNotFound
@@ -306,14 +326,13 @@ func (r *ListingRepo) GetBySlug(ctx context.Context, slug string) (*models.Listi
 }
 
 func (r *ListingRepo) ListByOwner(ctx context.Context, ownerID uuid.UUID) ([]*models.Listing, error) {
-	query := `
-		SELECT id, owner_id, title, slug, description, property_type, status,
-		       price_mxn, area_m2, construction_m2, municipality, community,
-		       latitude, longitude, is_featured, view_count, created_at, updated_at, published_at
+	query := fmt.Sprintf(`
+		SELECT %s
 		FROM listings
 		WHERE owner_id = $1
 		ORDER BY created_at DESC
-	`
+	`, listingSelectCols)
+
 	rows, err := r.db.Query(ctx, query, ownerID)
 	if err != nil {
 		return nil, fmt.Errorf("listing_repo: list by owner: %w", err)
@@ -323,12 +342,7 @@ func (r *ListingRepo) ListByOwner(ctx context.Context, ownerID uuid.UUID) ([]*mo
 	var listings []*models.Listing
 	for rows.Next() {
 		var l models.Listing
-		err := rows.Scan(
-			&l.ID, &l.OwnerID, &l.Title, &l.Slug, &l.Description, &l.PropertyType, &l.Status,
-			&l.PriceMXN, &l.AreaM2, &l.ConstructionM2, &l.Municipality, &l.Community,
-			&l.Latitude, &l.Longitude, &l.IsFeatured, &l.ViewCount, &l.CreatedAt, &l.UpdatedAt, &l.PublishedAt,
-		)
-		if err != nil {
+		if err := scanListing(rows, &l); err != nil {
 			return nil, fmt.Errorf("listing_repo: scan list by owner: %w", err)
 		}
 
@@ -401,10 +415,10 @@ func (r *ListingRepo) ClearMedia(ctx context.Context, listingID uuid.UUID) error
 	return nil
 }
 
-func (r *ListingRepo) SlugExists(ctx context.Context, slug string) (bool, error) {
+func (r *ListingRepo) SlugExists(ctx context.Context, s string) (bool, error) {
 	query := `SELECT EXISTS(SELECT 1 FROM listings WHERE slug = $1)`
 	var exists bool
-	err := r.db.QueryRow(ctx, query, slug).Scan(&exists)
+	err := r.db.QueryRow(ctx, query, s).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("listing_repo: slug exists: %w", err)
 	}
@@ -449,64 +463,4 @@ func (r *ListingRepo) IncrementViewCount(ctx context.Context, id uuid.UUID) erro
 		return fmt.Errorf("listing_repo: increment view count: %w", err)
 	}
 	return nil
-}
-
-func (r *ListingRepo) CreateProperty(ctx context.Context, p *models.Property, photos []string) error {
-	tx, err := r.db.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("listing_repo: begin tx: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	queryProp := `
-		INSERT INTO properties (
-			id, owner_id, title, slug, description, operation_type, property_type,
-			legal_regime, price_mxn, currency, area_total_m2, area_built_m2,
-			bedrooms, bathrooms, parking_spaces, municipality, community, address,
-			latitude, longitude, status, listing_tier, view_count,
-			contact_phone, contact_whatsapp, show_phone, show_whatsapp,
-			created_at, updated_at, published_at
-		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7,
-			$8, $9, $10, $11, $12,
-			$13, $14, $15, $16, $17, $18,
-			$19, $20, $21, $22, $23,
-			$24, $25, $26, $27,
-			$28, $29, $30
-		)
-	`
-	_, err = tx.Exec(ctx, queryProp,
-		p.ID, p.OwnerID, p.Title, p.Slug, p.Description, p.OperationType, p.PropertyType,
-		p.LegalRegime, p.PriceMXN, p.Currency, p.AreaTotalM2, p.AreaBuiltM2,
-		p.Bedrooms, p.Bathrooms, p.ParkingSpaces, p.Municipality, p.Community, p.Address,
-		p.Latitude, p.Longitude, p.Status, p.ListingTier, p.ViewCount,
-		p.ContactPhone, p.ContactWhatsApp, p.ShowPhone, p.ShowWhatsApp,
-		p.CreatedAt, p.UpdatedAt, p.PublishedAt,
-	)
-	if err != nil {
-		return fmt.Errorf("listing_repo: insert property: %w", err)
-	}
-
-	queryPhoto := `
-		INSERT INTO property_images (id, property_id, listing_id, url, is_primary, sort_order, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`
-	now := time.Now().UTC()
-	for idx, photoURL := range photos {
-		isPrimary := (idx == 0)
-		_, err = tx.Exec(ctx, queryPhoto,
-			uuid.New(),
-			p.ID,
-			p.ID,
-			photoURL,
-			isPrimary,
-			idx,
-			now,
-		)
-		if err != nil {
-			return fmt.Errorf("listing_repo: insert property image: %w", err)
-		}
-	}
-
-	return tx.Commit(ctx)
 }

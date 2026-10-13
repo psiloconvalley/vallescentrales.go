@@ -123,7 +123,7 @@ func (h *WizardPropertyHandler) AutoSave(w http.ResponseWriter, r *http.Request)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"status":"saved"}`))
+	_, _ = w.Write([]byte(`{"status":"saved"}`))
 }
 
 func (h *WizardPropertyHandler) UploadPhoto(w http.ResponseWriter, r *http.Request) {
@@ -145,11 +145,13 @@ func (h *WizardPropertyHandler) UploadPhoto(w http.ResponseWriter, r *http.Reque
 	}
 	defer file.Close()
 
-	res, err := h.storage.Upload(r.Context(), "properties", header.Filename, header.Header.Get("Content-Type"), file)
+	res, err := h.storage.Upload(r.Context(), "listings", header.Filename, header.Header.Get("Content-Type"), file)
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusBadRequest)
 		return
 	}
+
+	_ = user
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{
@@ -171,13 +173,11 @@ func (h *WizardPropertyHandler) Complete(w http.ResponseWriter, r *http.Request)
 	}
 
 	d := session.Data
+
 	title := stringVal(d, "title")
 	price, _ := strconv.ParseFloat(stringVal(d, "price"), 64)
 	lotSize, _ := strconv.ParseFloat(stringVal(d, "lot_size_m2"), 64)
 	constrSize, _ := strconv.ParseFloat(stringVal(d, "construction_m2"), 64)
-	bedrooms, _ := strconv.Atoi(stringVal(d, "bedrooms"))
-	bathrooms, _ := strconv.ParseFloat(stringVal(d, "bathrooms"), 64)
-	parking, _ := strconv.Atoi(stringVal(d, "parking_spaces"))
 
 	now := time.Now().UTC()
 
@@ -185,70 +185,60 @@ func (h *WizardPropertyHandler) Complete(w http.ResponseWriter, r *http.Request)
 	if desc := stringVal(d, "description"); desc != "" {
 		descPtr = &desc
 	}
-	var addrPtr *string
-	if addr := stringVal(d, "address"); addr != "" {
-		addrPtr = &addr
-	}
+
 	var commPtr *string
-	if comm := stringVal(d, "neighborhood"); comm != "" {
+	if comm := stringVal(d, "community"); comm != "" {
 		commPtr = &comm
 	}
-	var bedPtr *int
-	if bedrooms > 0 {
-		bedPtr = &bedrooms
-	}
-	var bathPtr *float64
-	if bathrooms > 0 {
-		bathPtr = &bathrooms
-	}
-	var parkPtr *int
-	if parking > 0 {
-		parkPtr = &parking
-	}
-	var lotPtr *float64
+
+	var areaPtr *float64
 	if lotSize > 0 {
-		lotPtr = &lotSize
+		areaPtr = &lotSize
 	}
+
 	var constrPtr *float64
 	if constrSize > 0 {
 		constrPtr = &constrSize
 	}
 
-	prop := &models.Property{
-		ID:            uuid.New(),
-		OwnerID:       user.ID,
-		Title:         title,
-		Slug:          slug.Generate(title),
-		Description:   descPtr,
-		OperationType: models.OperationType(stringVal(d, "operation_type")),
-		PropertyType:  models.PropertyType(stringVal(d, "property_type")),
-		LegalRegime:   models.LegalRegime(stringVal(d, "legal_regime")),
-		PriceMXN:      price,
-		Currency:      "MXN",
-		AreaTotalM2:   lotPtr,
-		AreaBuiltM2:   constrPtr,
-		Bedrooms:      bedPtr,
-		Bathrooms:     bathPtr,
-		ParkingSpaces: parkPtr,
-		Municipality:  stringVal(d, "municipality"),
-		Community:     commPtr,
-		Address:       addrPtr,
-		Status:        models.StatusActive,
-		ListingTier:   "free",
-		ShowPhone:     user.ShowPhone,
-		ShowWhatsApp:  user.ShowWhatsApp,
-		CreatedAt:     now,
-		UpdatedAt:     now,
-		PublishedAt:   &now,
+	listing := &models.Listing{
+		ID:             uuid.New(),
+		OwnerID:        user.ID,
+		Title:          title,
+		Slug:           slug.Generate(title),
+		Description:    descPtr,
+		OperationType:  models.OperationType(stringVal(d, "operation_type")),
+		PropertyType:   models.PropertyType(stringVal(d, "property_type")),
+		LegalRegime:    models.LegalRegime(stringVal(d, "legal_regime")),
+		PriceMXN:       price,
+		AreaM2:         areaPtr,
+		ConstructionM2: constrPtr,
+		Municipality:   stringVal(d, "municipality"),
+		Community:      commPtr,
+		Status:         models.StatusActive,
+		IsFeatured:     false,
+		ViewCount:      0,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+		PublishedAt:    &now,
 	}
 
-	photos := stringSliceVal(d, "photos")
-	if err := h.repo.CreateProperty(r.Context(), prop, photos); err != nil {
+	if !listing.CanPublish() {
+		http.Error(w, "Faltan campos obligatorios para publicar la propiedad", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.repo.Create(r.Context(), listing); err != nil {
 		http.Error(w, "Error al publicar propiedad", http.StatusInternalServerError)
 		return
 	}
 
+	photos := stringSliceVal(d, "photos")
+	for idx, photoURL := range photos {
+		_, _ = h.repo.AddMedia(r.Context(), listing.ID, photoURL, "", idx == 0, idx)
+	}
+
 	_ = h.engine.Finalize(r.Context(), user.ID, wizard.FlowPropertyPublish)
 
-	http.Redirect(w, r, fmt.Sprintf("/propiedad/%s?publicado=1", prop.Slug), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/propiedades/%s?publicado=1", listing.Slug), http.StatusSeeOther)
 }
