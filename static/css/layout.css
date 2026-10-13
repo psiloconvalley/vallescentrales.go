@@ -341,3 +341,31 @@ a:hover { color: var(--accent-dark); }
         gap: 0;
     }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DESKTOP NAV BREAKPOINT
+   Hamburger shows on mobile only. Desktop nav shows on tablets and larger.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@media (min-width: 768px) {
+    .nav-hamburger {
+        display: none;
+    }
+
+    .nav-desktop {
+        display: flex;
+        align-items: center;
+    }
+
+    .nav-logo-svg {
+        height: 38px;
+    }
+}
+
+/* Keep SVG logo compact on narrow phones so hamburger stays clickable */
+@media (max-width: 420px) {
+    .nav-logo-svg {
+        height: 28px;
+        max-width: 180px;
+    }
+}

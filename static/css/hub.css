@@ -286,3 +286,26 @@ body {
         gap: 0;
     }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   HUB BRAND MARK
+   Decorative SVG logo on the apex gateway page.
+   ══════════════════════════════════════════════════════════════════════════ */
+.hub-brand-mark {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.hub-brand-svg {
+    width: 100%;
+    max-width: 420px;
+    height: auto;
+    display: block;
+}
+
+@media (max-width: 640px) {
+    .hub-brand-svg {
+        max-width: 320px;
+    }
+}
