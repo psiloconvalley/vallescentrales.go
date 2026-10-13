@@ -244,6 +244,12 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 			}
 			return *b
 		},
+		"derefFloat": func(f *float64) float64 {
+			if f == nil {
+				return 0
+			}
+			return *f
+		},
 		"dict": func(values ...any) (map[string]any, error) {
 			if len(values)%2 != 0 {
 				return nil, fmt.Errorf("dict requires even number of arguments")
