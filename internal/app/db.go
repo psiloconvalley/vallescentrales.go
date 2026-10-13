@@ -1,5 +1,5 @@
 // internal/app/db.go
-// PostgreSQL connection pool setup and automatic self-healing migration runner.
+// PostgreSQL connection pool setup and automatic migration runner.
 
 package app
 
@@ -52,14 +52,12 @@ func NewDBPool(ctx context.Context, cfg *Config) (*pgxpool.Pool, error) {
 
 // runMigrations discovers and executes all pending SQL migrations in migrations/
 func runMigrations(ctx context.Context, pool *pgxpool.Pool) error {
-	// 1. Ensure schema tracking table exists and has all required columns
+	// 1. Ensure schema tracking table exists
 	createSchemaTable := `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			filename VARCHAR(255) PRIMARY KEY,
 			applied_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 		);
-		ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS filename VARCHAR(255) DEFAULT '';
-		ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS applied_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
 	`
 	if _, err := pool.Exec(ctx, createSchemaTable); err != nil {
 		return fmt.Errorf("failed to create schema_migrations table: %w", err)
@@ -82,30 +80,32 @@ func runMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 		}
 	}
 
-	// Sort migrations historically (lexicographically)
+	// Sort migrations lexicographically (000001, 000002, ..., 000013)
 	sort.Strings(migrations)
 
-	// 3. Self-Healing Bootstrapping: If "users" table already exists, mark historical migrations as applied
-	var usersExist bool
-	err = pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = 'users')").Scan(&usersExist)
+	// 3. One-Time Legacy Bootstrapping:
+	// Only if schema_migrations is COMPLETELY EMPTY and users table already exists.
+	// Only mark legacy migrations (<= 000012) as applied.
+	var countApplied int
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM schema_migrations").Scan(&countApplied)
 	if err != nil {
-		return fmt.Errorf("failed to check existing tables: %w", err)
+		return fmt.Errorf("failed to count applied migrations: %w", err)
 	}
 
-	if usersExist {
-		slog.Info("bootstrapping migrations tracking: database has pre-existing schema. marking legacy migrations as applied")
-		for _, filename := range migrations {
-			// Mark all old sequential migrations starting with "0000" as already applied
-			if strings.HasPrefix(filename, "0000") {
-				_, err := pool.Exec(ctx, "INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING", filename)
-				if err != nil {
-					return fmt.Errorf("failed to bootstrap tracking for migration %s: %w", filename, err)
+	if countApplied == 0 {
+		var usersExist bool
+		_ = pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = 'users')").Scan(&usersExist)
+		if usersExist {
+			slog.Info("bootstrapping tracking for legacy migrations (000001 through 000012)")
+			for _, filename := range migrations {
+				if strings.HasPrefix(filename, "00000") || strings.HasPrefix(filename, "000010") || strings.HasPrefix(filename, "000011") || strings.HasPrefix(filename, "000012") {
+					_, _ = pool.Exec(ctx, "INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING", filename)
 				}
 			}
 		}
 	}
 
-	// 4. Run outstanding migrations
+	// 4. Run outstanding migrations in a transaction
 	for _, filename := range migrations {
 		var exists bool
 		err := pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE filename = $1)", filename).Scan(&exists)
@@ -119,14 +119,12 @@ func runMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 
 		slog.Info("running outstanding database migration", "filename", filename)
 
-		// Read migration content
 		path := filepath.Join("migrations", filename)
 		content, err := os.ReadFile(path)
 		if err != nil {
 			return fmt.Errorf("failed to read migration file %s: %w", filename, err)
 		}
 
-		// Execute migration query inside transaction
 		tx, err := pool.Begin(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to begin transaction for %s: %w", filename, err)
@@ -137,7 +135,6 @@ func runMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 			return fmt.Errorf("failed to execute migration %s: %w", filename, err)
 		}
 
-		// Record migration tracking row
 		if _, err := tx.Exec(ctx, "INSERT INTO schema_migrations (filename) VALUES ($1)", filename); err != nil {
 			_ = tx.Rollback(ctx)
 			return fmt.Errorf("failed to record migration %s: %w", filename, err)
