@@ -2,8 +2,6 @@ package templatecheck
 
 import (
 	"bytes"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,8 +9,8 @@ import (
 	"vallescentrales/internal/app"
 )
 
-// setupProjectRoot ensures the test runs with the project root as working directory
-// so relative paths like "templates/" resolve correctly.
+// setupProjectRoot ensures the test runs with the project root as working
+// directory so relative paths like "templates/" resolve correctly.
 func setupProjectRoot(t *testing.T) {
 	t.Helper()
 
@@ -28,8 +26,8 @@ func setupProjectRoot(t *testing.T) {
 	t.Fatal("could not locate project root (go.mod not found)")
 }
 
-// TestAllTemplatesParse verifies that every .tmpl file in the repository
-// parses cleanly with the production funcMap without syntax errors.
+// TestAllTemplatesParse verifies that every .tmpl file parses cleanly
+// with the production funcMap. Catches syntax errors like missing {{end}}.
 func TestAllTemplatesParse(t *testing.T) {
 	setupProjectRoot(t)
 
@@ -66,14 +64,19 @@ func TestAllTemplatesParse(t *testing.T) {
 	t.Logf("✅ Successfully parsed %d registered template targets", len(tmplMap))
 }
 
-// ─────────────────────────────────────────────────────────────────
-// TestListingDetailRender renders listing_detail.tmpl with a realistic
-// fake payload and asserts that execution completes without error.
-// Catches schema drift bugs where templates reference removed fields.
-// ─────────────────────────────────────────────────────────────────
-
-func TestListingDetailRender(t *testing.T) {
-	// ───── PHASE 1: ARRANGE ─────
+// TestCriticalTemplatesRender exercises each high-risk template with a
+// realistic fake payload and asserts it renders without error. This is
+// the primary defense against schema drift bugs where templates reference
+// struct fields that have been renamed or removed.
+//
+// Each row in the table specifies:
+//   - name:     human-readable subtest label
+//   - template: the registered template key in the parsed map
+//   - target:   the layout to execute ("base", "wizard/base", or the
+//               template's own define name for standalone partials)
+//   - data:     the fake payload to inject at render time
+//   - mustContain: optional sanity-check substring in the output
+func TestCriticalTemplatesRender(t *testing.T) {
 	setupProjectRoot(t)
 
 	tmplMap, err := app.ParseTemplates(nil)
@@ -81,44 +84,65 @@ func TestListingDetailRender(t *testing.T) {
 		t.Fatalf("ParseTemplates failed: %v", err)
 	}
 
-	tmpl, ok := tmplMap["listing_detail.tmpl"]
-	if !ok {
-		t.Fatal("listing_detail.tmpl was not found in parsed template map")
+	tests := []struct {
+		name        string
+		template    string
+		target      string
+		data        any
+		mustContain string
+	}{
+		{
+			name:        "listing_detail renders with full owner + viewer payload",
+			template:    "listing_detail.tmpl",
+			target:      "base",
+			data:        fakeListingDetailData(),
+			mustContain: "Casa de campo con terreno",
+		},
+		{
+			name:        "dashboard renders with user and listings slice",
+			template:    "dashboard.tmpl",
+			target:      "base",
+			data:        fakeDashboardData(),
+			mustContain: "María",
+		},
+		{
+			name:        "wizard property step1 renders with step data",
+			template:    "wizard/property/step1.tmpl",
+			target:      "wizard/base",
+			data:        fakeWizardPropertyStep1Data(),
+			mustContain: "", // no strict content assertion; render-success is enough
+		},
 	}
 
-	data := fakeListingDetailData()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpl, ok := tmplMap[tt.template]
+			if !ok {
+				t.Fatalf("template %q not found in parsed template map", tt.template)
+			}
 
-	// Inject the CSRF token and AssetVersion that Render() normally adds,
-	// so the template doesn't crash looking for them.
-	data["CSRFToken"] = "fake-csrf-token-for-testing"
-	data["AssetVersion"] = "test-version"
+			// Inject the two values that production's Render() auto-injects.
+			// Only do this if data is already a map; otherwise skip (partials
+			// may receive a direct struct and have no need for them).
+			if m, ok := tt.data.(map[string]any); ok {
+				m["CSRFToken"] = "fake-csrf-token-for-testing"
+				m["AssetVersion"] = "test-version"
+			}
 
-	// ───── PHASE 2: ACT ─────
-	// Render into a buffer so we don't need a real HTTP response writer.
-	var buf bytes.Buffer
-	err = tmpl.ExecuteTemplate(&buf, "base", data)
+			var buf bytes.Buffer
+			if err := tmpl.ExecuteTemplate(&buf, tt.target, tt.data); err != nil {
+				t.Fatalf("render failed: %v", err)
+			}
 
-	// ───── PHASE 3: ASSERT ─────
-	if err != nil {
-		t.Fatalf("listing_detail.tmpl failed to render: %v", err)
+			if buf.Len() == 0 {
+				t.Fatal("render produced empty output")
+			}
+
+			if tt.mustContain != "" && !bytes.Contains(buf.Bytes(), []byte(tt.mustContain)) {
+				t.Errorf("expected rendered output to contain %q, but it did not", tt.mustContain)
+			}
+
+			t.Logf("✅ %s rendered successfully (%d bytes)", tt.template, buf.Len())
+		})
 	}
-
-	output := buf.String()
-	if len(output) == 0 {
-		t.Fatal("render produced empty output")
-	}
-
-	// Sanity check: the rendered HTML should mention the listing title.
-	if !bytes.Contains(buf.Bytes(), []byte("Casa de campo con terreno")) {
-		t.Error("rendered output did not contain the listing title")
-	}
-
-	t.Logf("✅ listing_detail.tmpl rendered successfully (%d bytes)", len(output))
 }
-
-// ─────────────────────────────────────────────────────────────────
-// _ ensures the httptest import survives in case we add HTTP-shaped
-// render tests later. Harmless no-op reference.
-// ─────────────────────────────────────────────────────────────────
-var _ = httptest.NewRecorder
-var _ = http.StatusOK
