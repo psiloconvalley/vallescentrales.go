@@ -54,14 +54,11 @@ func toInt64(n any) int64 {
 	}
 }
 
-func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRenderer, error) {
-	tr := &TemplateRenderer{
-		templates:    make(map[string]*template.Template),
-		assetVersion: fmt.Sprintf("%d", time.Now().Unix()),
-		currencySvc:  currencySvc,
-	}
-
-	funcMap := template.FuncMap{
+// buildFuncMap returns the complete template function map used by every template
+// across the application. Extracted so that tests can parse templates using
+// the exact same helper functions as production, eliminating drift.
+func buildFuncMap(currencySvc *services.CurrencyService) template.FuncMap {
+	return template.FuncMap{
 		"formatPrice": func(n int64) string {
 			return formatCommaNumber(n)
 		},
@@ -265,6 +262,15 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 			return m, nil
 		},
 	}
+}
+
+// ParseTemplates walks the templates directory and returns a fully parsed
+// template map keyed by both relative path and basename. This is the pure
+// parsing step with no HTTP coupling, so tests and production can share
+// the exact same parser behavior.
+func ParseTemplates(currencySvc *services.CurrencyService) (map[string]*template.Template, error) {
+	funcMap := buildFuncMap(currencySvc)
+	templates := make(map[string]*template.Template)
 
 	// 1. Gather all shared partials
 	var partials []string
@@ -313,7 +319,7 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 			if err != nil {
 				return fmt.Errorf("parsing %s: %w", path, err)
 			}
-			tr.templates["hub.tmpl"] = tmpl
+			templates["hub.tmpl"] = tmpl
 			return nil
 		}
 
@@ -331,8 +337,8 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 		}
 
 		// Register under relative path and basename for flexible handler lookups
-		tr.templates[cleanRel] = tmpl
-		tr.templates[filepath.Base(path)] = tmpl
+		templates[cleanRel] = tmpl
+		templates[filepath.Base(path)] = tmpl
 
 		return nil
 	})
@@ -341,7 +347,22 @@ func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRender
 		return nil, fmt.Errorf("loading templates: %w", err)
 	}
 
-	return tr, nil
+	return templates, nil
+}
+
+// NewTemplateRenderer wires up the HTTP-shaped renderer that handlers use.
+// Parsing itself is delegated to ParseTemplates so tests can share the logic.
+func NewTemplateRenderer(currencySvc *services.CurrencyService) (*TemplateRenderer, error) {
+	templates, err := ParseTemplates(currencySvc)
+	if err != nil {
+		return nil, err
+	}
+
+	return &TemplateRenderer{
+		templates:    templates,
+		assetVersion: fmt.Sprintf("%d", time.Now().Unix()),
+		currencySvc:  currencySvc,
+	}, nil
 }
 
 func (tr *TemplateRenderer) Render(w http.ResponseWriter, r *http.Request, name string, data any) {
