@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  {{if .CSRFToken}}<meta name="csrf-token" content="{{.CSRFToken}}">{{end}}
   <title>{{if .Title}}{{.Title}} — {{end}}Valles Centrales</title>
   <link rel="stylesheet" href="/static/css/tokens.css?v={{.AssetVersion}}">
   <link rel="stylesheet" href="/static/css/reset.css?v={{.AssetVersion}}">
@@ -19,13 +20,23 @@
         </svg>
         <span class="wizard-brand-text">Valles Centrales</span>
       </a>
-      <a href="/cuenta" class="wizard-exit-btn" title="Guardar y salir">
-        <span>Guardar y salir</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </a>
+
+      <div class="wizard-header-right">
+        <!-- Live Autosave Status Indicator -->
+        <div class="wizard-autosave-indicator" data-wizard-autosave aria-live="polite">
+          <span class="wizard-autosave-dot"></span>
+          <span class="wizard-autosave-text"></span>
+        </div>
+
+        <!-- Guardar y salir button -->
+        <a href="/cuenta" class="wizard-exit-btn" data-wizard-exit title="Guardar borrador y salir a mi cuenta">
+          <span>Guardar y salir</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </a>
+      </div>
     </div>
   </header>
 
@@ -34,6 +45,8 @@
       {{template "content" .}}
     </div>
   </main>
+
+  <script src="/static/js/wizard.js?v={{.AssetVersion}}" defer></script>
 </body>
 </html>
 {{end}}
