@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -113,11 +114,27 @@ func (h *WizardPropertyHandler) AutoSave(w http.ResponseWriter, r *http.Request)
 
 	var payload map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		slog.Warn("wizard property autosave invalid json", "error", err)
 		http.Error(w, `{"error":"invalid_json"}`, http.StatusBadRequest)
 		return
 	}
 
+	// If step was not in URL, check if it was included in payload
+	if stepNum == 0 {
+		if rawStep, ok := payload["_step"]; ok {
+			switch v := rawStep.(type) {
+			case float64:
+				stepNum = int(v)
+			case string:
+				stepNum, _ = strconv.Atoi(v)
+			}
+			delete(payload, "_step")
+		}
+	}
+	delete(payload, "csrf_token")
+
 	if err := h.engine.AutoSave(r.Context(), user.ID, wizard.FlowPropertyPublish, stepNum, payload); err != nil {
+		slog.Error("wizard property autosave failed", "user_id", user.ID, "error", err)
 		http.Error(w, `{"error":"save_failed"}`, http.StatusInternalServerError)
 		return
 	}

@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -102,18 +103,34 @@ func (h *WizardAccountHandler) AutoSave(w http.ResponseWriter, r *http.Request) 
 
 	var payload map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		slog.Warn("wizard account autosave invalid json", "error", err)
 		http.Error(w, `{"error":"invalid_json"}`, http.StatusBadRequest)
 		return
 	}
 
+	if stepNum == 0 {
+		if rawStep, ok := payload["_step"]; ok {
+			switch v := rawStep.(type) {
+			case float64:
+				stepNum = int(v)
+			case string:
+				stepNum, _ = strconv.Atoi(v)
+			}
+			delete(payload, "_step")
+		}
+	}
+	delete(payload, "csrf_token")
+
 	if err := h.engine.AutoSave(r.Context(), user.ID, wizard.FlowAccountSetup, stepNum, payload); err != nil {
+		slog.Error("wizard account autosave failed", "user_id", user.ID, "error", err)
 		http.Error(w, `{"error":"save_failed"}`, http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"status":"saved"}`))
+	_, _ = w.Write([]byte(`{"status":"saved"}`))
 }
+
 func (h *WizardAccountHandler) Complete(w http.ResponseWriter, r *http.Request) {
 	user := getUser(r)
 	if user == nil {

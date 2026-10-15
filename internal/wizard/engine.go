@@ -45,7 +45,7 @@ func NewEngine(db *pgxpool.Pool) *Engine {
 
 func (e *Engine) StartOrResume(ctx context.Context, userID uuid.UUID, flow FlowType) (*Session, error) {
 	totalSteps := 2
-	if flow == FlowProperty {
+	if flow == FlowPropertyPublish || flow == FlowProperty {
 		totalSteps = 3
 	}
 
@@ -145,9 +145,9 @@ func (e *Engine) Get(ctx context.Context, userID uuid.UUID, flow FlowType) (*Ses
 }
 
 func (e *Engine) SaveStep(ctx context.Context, userID uuid.UUID, flow FlowType, step int, stepData map[string]any) (*Session, error) {
-	session, err := e.Get(ctx, userID, flow)
+	session, err := e.StartOrResume(ctx, userID, flow)
 	if err != nil {
-		return nil, fmt.Errorf("getting session for savestep: %w", err)
+		return nil, fmt.Errorf("getting session for step save: %w", err)
 	}
 
 	if session.Data == nil {
@@ -157,9 +157,14 @@ func (e *Engine) SaveStep(ctx context.Context, userID uuid.UUID, flow FlowType, 
 		session.Data[k] = v
 	}
 
+	nextStep := step + 1
+	if nextStep > session.TotalSteps {
+		nextStep = session.TotalSteps
+	}
+
 	dataBytes, err := json.Marshal(session.Data)
 	if err != nil {
-		return nil, fmt.Errorf("marshaling merged step data: %w", err)
+		return nil, fmt.Errorf("marshaling wizard data: %w", err)
 	}
 
 	query := `
@@ -169,17 +174,17 @@ func (e *Engine) SaveStep(ctx context.Context, userID uuid.UUID, flow FlowType, 
 		    updated_at = NOW()
 		WHERE id = $3
 	`
-	_, err = e.db.Exec(ctx, query, step, dataBytes, session.ID)
+	_, err = e.db.Exec(ctx, query, nextStep, dataBytes, session.ID)
 	if err != nil {
 		return nil, fmt.Errorf("updating wizard step: %w", err)
 	}
 
-	session.CurrentStep = step
+	session.CurrentStep = nextStep
 	return session, nil
 }
 
 func (e *Engine) AutoSave(ctx context.Context, userID uuid.UUID, flow FlowType, step int, stepData map[string]any) error {
-	session, err := e.Get(ctx, userID, flow)
+	session, err := e.StartOrResume(ctx, userID, flow)
 	if err != nil {
 		return fmt.Errorf("getting session for autosave: %w", err)
 	}
@@ -189,6 +194,11 @@ func (e *Engine) AutoSave(ctx context.Context, userID uuid.UUID, flow FlowType, 
 	}
 	for k, v := range stepData {
 		session.Data[k] = v
+	}
+
+	targetStep := session.CurrentStep
+	if step > 0 && step <= session.TotalSteps {
+		targetStep = step
 	}
 
 	dataBytes, err := json.Marshal(session.Data)
@@ -203,7 +213,7 @@ func (e *Engine) AutoSave(ctx context.Context, userID uuid.UUID, flow FlowType, 
 		    updated_at = NOW()
 		WHERE id = $3
 	`
-	_, err = e.db.Exec(ctx, query, step, dataBytes, session.ID)
+	_, err = e.db.Exec(ctx, query, targetStep, dataBytes, session.ID)
 	return err
 }
 
