@@ -357,33 +357,33 @@ func (r *ListingRepo) ListByOwner(ctx context.Context, ownerID uuid.UUID) ([]*mo
 	return listings, rows.Err()
 }
 
-func (r *ListingRepo) AddMedia(ctx context.Context, listingID uuid.UUID, mediaURL string, caption string, isPrimary bool, sortOrder int) (*models.ListingMedia, error) {
+func (r *ListingRepo) AddMedia(ctx context.Context, listingID uuid.UUID, mediaURL string, storageKey string, isPrimary bool, sortOrder int) (*models.ListingMedia, error) {
 	id := uuid.New()
 	now := time.Now().UTC()
 
 	query := `
-		INSERT INTO listing_media (id, listing_id, url, caption, is_primary, sort_order, created_at)
+		INSERT INTO listing_media (id, listing_id, url, storage_key, is_primary, sort_order, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
-	_, err := r.db.Exec(ctx, query, id, listingID, mediaURL, caption, isPrimary, sortOrder, now)
+	_, err := r.db.Exec(ctx, query, id, listingID, mediaURL, storageKey, isPrimary, sortOrder, now)
 	if err != nil {
 		return nil, fmt.Errorf("listing_repo: add media: %w", err)
 	}
 
 	return &models.ListingMedia{
-		ID:        id,
-		ListingID: listingID,
-		URL:       mediaURL,
-		Caption:   caption,
-		IsPrimary: isPrimary,
-		SortOrder: sortOrder,
-		CreatedAt: now,
+		ID:         id,
+		ListingID:  listingID,
+		URL:        mediaURL,
+		StorageKey: storageKey,
+		IsPrimary:  isPrimary,
+		SortOrder:  sortOrder,
+		CreatedAt:  now,
 	}, nil
 }
 
 func (r *ListingRepo) GetMedia(ctx context.Context, listingID uuid.UUID) ([]models.ListingMedia, error) {
 	query := `
-		SELECT id, listing_id, url, COALESCE(caption, ''), is_primary, sort_order, created_at
+		SELECT id, listing_id, url, storage_key, COALESCE(alt_text, ''), is_primary, sort_order, created_at
 		FROM listing_media
 		WHERE listing_id = $1
 		ORDER BY sort_order ASC, created_at ASC
@@ -397,7 +397,7 @@ func (r *ListingRepo) GetMedia(ctx context.Context, listingID uuid.UUID) ([]mode
 	var media []models.ListingMedia
 	for rows.Next() {
 		var m models.ListingMedia
-		if err := rows.Scan(&m.ID, &m.ListingID, &m.URL, &m.Caption, &m.IsPrimary, &m.SortOrder, &m.CreatedAt); err != nil {
+		if err := rows.Scan(&m.ID, &m.ListingID, &m.URL, &m.StorageKey, &m.AltText, &m.IsPrimary, &m.SortOrder, &m.CreatedAt); err != nil {
 			return nil, fmt.Errorf("listing_repo: scan media: %w", err)
 		}
 		media = append(media, m)

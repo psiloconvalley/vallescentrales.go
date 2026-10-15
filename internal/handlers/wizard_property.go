@@ -268,10 +268,34 @@ func (h *WizardPropertyHandler) Complete(w http.ResponseWriter, r *http.Request)
 
 	photos := stringSliceVal(d, "photos")
 	for idx, photoURL := range photos {
-		_, _ = h.repo.AddMedia(r.Context(), listing.ID, photoURL, "", idx == 0, idx)
+		storageKey := storageKeyFromURL(photoURL)
+		if _, err := h.repo.AddMedia(r.Context(), listing.ID, photoURL, storageKey, idx == 0, idx); err != nil {
+			slog.Error("wizard complete: failed to link photo", "listing_id", listing.ID, "url", photoURL, "error", err)
+		}
 	}
 
 	_ = h.engine.Finalize(r.Context(), user.ID, wizard.FlowPropertyPublish)
 
 	http.Redirect(w, r, fmt.Sprintf("/propiedades/%s?publicado=1", listing.Slug), http.StatusSeeOther)
+}
+
+// storageKeyFromURL derives the R2 object key from a public URL by stripping
+// the "https://host/" prefix. Returns the full URL if it cannot be parsed.
+func storageKeyFromURL(publicURL string) string {
+	// Strip "https://host/" leaving "folder/filename.ext"
+	// Example: "https://pub-abc.r2.dev/listings/20260101-xyz-pic.jpg" -> "listings/20260101-xyz-pic.jpg"
+	s := publicURL
+	for _, prefix := range []string{"https://", "http://"} {
+		if len(s) > len(prefix) && s[:len(prefix)] == prefix {
+			s = s[len(prefix):]
+			break
+		}
+	}
+	// Find first "/" after host
+	for i := 0; i < len(s); i++ {
+		if s[i] == '/' {
+			return s[i+1:]
+		}
+	}
+	return publicURL
 }

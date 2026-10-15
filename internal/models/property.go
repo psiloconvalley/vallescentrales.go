@@ -21,7 +21,8 @@ type PropertyImage struct {
 	PropertyID uuid.UUID `json:"property_id" db:"property_id"`
 	ListingID  uuid.UUID `json:"listing_id"  db:"listing_id"`
 	URL        string    `json:"url"         db:"url"`
-	Caption    string    `json:"caption"     db:"caption"`
+	StorageKey string    `json:"storage_key" db:"storage_key"`
+	AltText    string    `json:"alt_text"    db:"alt_text"`
 	IsPrimary  bool      `json:"is_primary"  db:"is_primary"`
 	SortOrder  int       `json:"sort_order"  db:"sort_order"`
 	CreatedAt  time.Time `json:"created_at"  db:"created_at"`
