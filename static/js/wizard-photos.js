@@ -1,5 +1,5 @@
 /* ============================================================================
-   Wizard Photos — Drag-and-drop, preview, reorder, primary selection
+   Wizard Photos — Drag-and-drop, AJAX upload to R2, preview, reorder
    Vanilla ES6+, zero dependencies.
    ============================================================================ */
 
@@ -9,15 +9,19 @@
     const MAX_FILES = 10;
     const MAX_SIZE = 10 * 1024 * 1024;
     const ALLOWED = ['image/jpeg', 'image/png', 'image/webp'];
+    const UPLOAD_URL = '/publicar/foto';
 
     const dropzone = document.querySelector('[data-dropzone]');
     const fileInput = document.querySelector('#images');
     const previewGrid = document.querySelector('[data-preview-grid]');
+    const photosContainer = document.querySelector('[data-photos-container]');
+    const submitBtn = document.querySelector('[data-wizard-form] button[type="submit"]');
+
     if (!dropzone || !fileInput || !previewGrid) return;
 
     let files = [];
+    const csrfToken = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
 
-    // --- Drag & Drop ---
     dropzone.addEventListener('click', () => fileInput.click());
     dropzone.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -29,7 +33,10 @@
         dropzone.classList.remove('is-dragging');
         addFiles(e.dataTransfer.files);
     });
-    fileInput.addEventListener('change', () => addFiles(fileInput.files));
+    fileInput.addEventListener('change', () => {
+        addFiles(fileInput.files);
+        fileInput.value = '';
+    });
 
     function addFiles(newFiles) {
         for (const f of newFiles) {
@@ -45,23 +52,49 @@
                 alert('"' + f.name + '" excede 10 MB.');
                 continue;
             }
-            files.push(f);
+            const entry = { file: f, url: null, storageKey: null, status: 'uploading' };
+            files.push(entry);
+            uploadFile(entry);
         }
         renderPreviews();
-        syncFileInput();
+        updateSubmitState();
+    }
+
+    async function uploadFile(entry) {
+        const fd = new FormData();
+        fd.append('photo', entry.file);
+        try {
+            const res = await fetch(UPLOAD_URL, {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': csrfToken },
+                body: fd,
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            entry.url = data.url;
+            entry.storageKey = data.storage_key;
+            entry.status = 'done';
+        } catch (err) {
+            console.error('Photo upload error:', err);
+            entry.status = 'error';
+        }
+        renderPreviews();
+        syncHiddenInputs();
+        updateSubmitState();
     }
 
     function removeFile(index) {
         files.splice(index, 1);
         renderPreviews();
-        syncFileInput();
+        syncHiddenInputs();
+        updateSubmitState();
     }
 
     function setPrimary(index) {
         const f = files.splice(index, 1)[0];
         files.unshift(f);
         renderPreviews();
-        syncFileInput();
+        syncHiddenInputs();
     }
 
     function moveFile(from, to) {
@@ -69,92 +102,115 @@
         const f = files.splice(from, 1)[0];
         files.splice(to, 0, f);
         renderPreviews();
-        syncFileInput();
+        syncHiddenInputs();
     }
 
-    // Keep the hidden file input in sync with our array
-    function syncFileInput() {
-        const dt = new DataTransfer();
-        files.forEach(f => dt.items.add(f));
-        fileInput.files = dt.files;
+    function syncHiddenInputs() {
+        if (!photosContainer) return;
+        photosContainer.innerHTML = '';
+        files.forEach(function (entry) {
+            if (entry.url) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'photos';
+                input.value = entry.url;
+                photosContainer.appendChild(input);
+            }
+        });
+    }
+
+    function updateSubmitState() {
+        if (!submitBtn) return;
+        var uploading = files.some(function (f) { return f.status === 'uploading'; });
+        submitBtn.disabled = uploading;
+        submitBtn.classList.toggle('is-busy', uploading);
     }
 
     function renderPreviews() {
         previewGrid.innerHTML = '';
-        files.forEach((file, i) => {
-            const card = document.createElement('div');
+        files.forEach(function (entry, i) {
+            var card = document.createElement('div');
             card.className = 'wizard-preview-card' + (i === 0 ? ' is-primary' : '');
-            card.draggable = true;
+            if (entry.status === 'uploading') card.classList.add('is-uploading');
+            if (entry.status === 'error') card.classList.add('is-error');
+            card.draggable = entry.status === 'done';
             card.dataset.index = i;
 
-            const img = document.createElement('img');
+            var img = document.createElement('img');
             img.className = 'wizard-preview-img';
-            img.alt = file.name;
-            img.src = URL.createObjectURL(file);
-            img.onload = () => URL.revokeObjectURL(img.src);
+            img.alt = entry.file.name;
+            img.src = URL.createObjectURL(entry.file);
+            img.onload = function () { URL.revokeObjectURL(img.src); };
 
-            const badge = document.createElement('span');
+            var badge = document.createElement('span');
             badge.className = 'wizard-preview-badge';
-            badge.textContent = i === 0 ? '★ Principal' : (i + 1);
+            if (entry.status === 'uploading') {
+                badge.textContent = '⏳ Subiendo…';
+            } else if (entry.status === 'error') {
+                badge.textContent = '✕ Error';
+            } else {
+                badge.textContent = i === 0 ? '★ Principal' : String(i + 1);
+            }
 
-            const actions = document.createElement('div');
+            var actions = document.createElement('div');
             actions.className = 'wizard-preview-actions';
 
-            if (i > 0) {
-                const starBtn = document.createElement('button');
-                starBtn.type = 'button';
-                starBtn.className = 'wizard-preview-btn';
-                starBtn.textContent = '★';
-                starBtn.title = 'Hacer foto principal';
-                starBtn.addEventListener('click', (e) => { e.stopPropagation(); setPrimary(i); });
-                actions.appendChild(starBtn);
+            if (entry.status === 'done') {
+                if (i > 0) {
+                    var starBtn = document.createElement('button');
+                    starBtn.type = 'button';
+                    starBtn.className = 'wizard-preview-btn';
+                    starBtn.textContent = '★';
+                    starBtn.title = 'Hacer foto principal';
+                    starBtn.addEventListener('click', function (e) { e.stopPropagation(); setPrimary(i); });
+                    actions.appendChild(starBtn);
+                }
+                if (i > 0) {
+                    var leftBtn = document.createElement('button');
+                    leftBtn.type = 'button';
+                    leftBtn.className = 'wizard-preview-btn';
+                    leftBtn.textContent = '←';
+                    leftBtn.title = 'Mover a la izquierda';
+                    leftBtn.addEventListener('click', function (e) { e.stopPropagation(); moveFile(i, i - 1); });
+                    actions.appendChild(leftBtn);
+                }
+                if (i < files.length - 1) {
+                    var rightBtn = document.createElement('button');
+                    rightBtn.type = 'button';
+                    rightBtn.className = 'wizard-preview-btn';
+                    rightBtn.textContent = '→';
+                    rightBtn.title = 'Mover a la derecha';
+                    rightBtn.addEventListener('click', function (e) { e.stopPropagation(); moveFile(i, i + 1); });
+                    actions.appendChild(rightBtn);
+                }
             }
 
-            if (i > 0) {
-                const leftBtn = document.createElement('button');
-                leftBtn.type = 'button';
-                leftBtn.className = 'wizard-preview-btn';
-                leftBtn.textContent = '←';
-                leftBtn.title = 'Mover a la izquierda';
-                leftBtn.addEventListener('click', (e) => { e.stopPropagation(); moveFile(i, i - 1); });
-                actions.appendChild(leftBtn);
-            }
-
-            if (i < files.length - 1) {
-                const rightBtn = document.createElement('button');
-                rightBtn.type = 'button';
-                rightBtn.className = 'wizard-preview-btn';
-                rightBtn.textContent = '→';
-                rightBtn.title = 'Mover a la derecha';
-                rightBtn.addEventListener('click', (e) => { e.stopPropagation(); moveFile(i, i + 1); });
-                actions.appendChild(rightBtn);
-            }
-
-            const removeBtn = document.createElement('button');
+            var removeBtn = document.createElement('button');
             removeBtn.type = 'button';
             removeBtn.className = 'wizard-preview-btn wizard-preview-btn-remove';
             removeBtn.textContent = '✕';
             removeBtn.title = 'Eliminar foto';
-            removeBtn.addEventListener('click', (e) => { e.stopPropagation(); removeFile(i); });
+            removeBtn.addEventListener('click', function (e) { e.stopPropagation(); removeFile(i); });
             actions.appendChild(removeBtn);
 
             card.appendChild(img);
             card.appendChild(badge);
             card.appendChild(actions);
 
-            // Drag reorder
-            card.addEventListener('dragstart', (e) => {
-                e.dataTransfer.setData('text/plain', i);
-                card.classList.add('is-dragging');
-            });
-            card.addEventListener('dragend', () => card.classList.remove('is-dragging'));
-            card.addEventListener('dragover', (e) => e.preventDefault());
-            card.addEventListener('drop', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const from = parseInt(e.dataTransfer.getData('text/plain'));
-                moveFile(from, i);
-            });
+            if (entry.status === 'done') {
+                card.addEventListener('dragstart', function (e) {
+                    e.dataTransfer.setData('text/plain', String(i));
+                    card.classList.add('is-dragging');
+                });
+                card.addEventListener('dragend', function () { card.classList.remove('is-dragging'); });
+                card.addEventListener('dragover', function (e) { e.preventDefault(); });
+                card.addEventListener('drop', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var from = parseInt(e.dataTransfer.getData('text/plain'));
+                    moveFile(from, i);
+                });
+            }
 
             previewGrid.appendChild(card);
         });

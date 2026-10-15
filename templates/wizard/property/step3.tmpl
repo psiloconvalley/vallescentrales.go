@@ -12,10 +12,9 @@
         <p class="wizard-subtitle">Las propiedades con buenas fotos reciben 10 veces más contactos. Sube hasta 10 imágenes. La primera será la portada.</p>
     </div>
 
-    <form method="POST" action="/publicar/paso/3" class="wizard-form" enctype="multipart/form-data" data-wizard-form>
+    <form method="POST" action="/publicar/paso/3" class="wizard-form" data-wizard-form>
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
-        <!-- Dropzone -->
         <div class="wizard-dropzone" data-dropzone>
             <div class="wizard-dropzone-content">
                 <div class="wizard-dropzone-icon">
@@ -29,11 +28,12 @@
                 <p class="wizard-dropzone-subtitle">o haz clic para seleccionar archivos</p>
                 <p class="wizard-dropzone-hint">JPG, PNG o WebP · hasta 10 MB cada una · máximo 10 fotos</p>
             </div>
-            <input type="file" id="images" name="images" accept="image/jpeg,image/png,image/webp" multiple class="wizard-dropzone-input">
+            <input type="file" id="images" accept="image/jpeg,image/png,image/webp" multiple class="wizard-dropzone-input">
         </div>
 
-        <!-- Preview grid populated by wizard-photos.js -->
         <div class="wizard-preview-grid" data-preview-grid></div>
+
+        <div data-photos-container></div>
 
         <div class="wizard-actions">
             <a href="/publicar/paso/2" class="wizard-btn wizard-btn-secondary">
@@ -55,5 +55,5 @@
     </form>
 </div>
 
-<script src="/static/js/wizard-photos.js" defer></script>
+<script src="/static/js/wizard-photos.js?v={{.AssetVersion}}" defer></script>
 {{end}}

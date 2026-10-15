@@ -150,6 +150,11 @@ func (h *WizardPropertyHandler) UploadPhoto(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	if !h.storage.Enabled() {
+		http.Error(w, `{"error":"photo upload not available"}`, http.StatusServiceUnavailable)
+		return
+	}
+
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		http.Error(w, `{"error":"file_too_large"}`, http.StatusBadRequest)
 		return
@@ -162,17 +167,28 @@ func (h *WizardPropertyHandler) UploadPhoto(w http.ResponseWriter, r *http.Reque
 	}
 	defer file.Close()
 
-	res, err := h.storage.Upload(r.Context(), "listings", header.Filename, header.Header.Get("Content-Type"), file)
-	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusBadRequest)
+	if header.Size > services.MaxImageSize {
+		http.Error(w, `{"error":"file_too_large"}`, http.StatusBadRequest)
 		return
 	}
 
-	_ = user
+	contentType := header.Header.Get("Content-Type")
+	if !services.AllowedImageType(contentType) {
+		http.Error(w, `{"error":"invalid_image_type"}`, http.StatusBadRequest)
+		return
+	}
+
+	res, err := h.storage.Upload(r.Context(), "listings", header.Filename, contentType, file)
+	if err != nil {
+		slog.Error("wizard photo upload failed", "user_id", user.ID, "error", err)
+		http.Error(w, `{"error":"upload_failed"}`, http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{
-		"url": res.PublicURL,
+		"url":         res.PublicURL,
+		"storage_key": res.StorageKey,
 	})
 }
 

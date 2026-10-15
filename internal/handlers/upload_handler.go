@@ -8,21 +8,19 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 
 	"vallescentrales/internal/middleware"
 	"vallescentrales/internal/repo"
 	"vallescentrales/internal/services"
 )
 
-// UploadHandler handles all file upload operations.
 type UploadHandler struct {
 	storage  *services.StorageService
 	listings *repo.ListingRepo
 	users    *repo.UserRepo
 }
 
-// NewUploadHandler creates an UploadHandler.
 func NewUploadHandler(storage *services.StorageService, listings *repo.ListingRepo, users *repo.UserRepo) *UploadHandler {
 	return &UploadHandler{
 		storage:  storage,
@@ -31,8 +29,8 @@ func NewUploadHandler(storage *services.StorageService, listings *repo.ListingRe
 	}
 }
 
-// HandleUploadListingPhotos handles photo upload for a listing.
-// POST /listings/{slug}/photos
+// HandleUploadListingPhotos handles photo upload for an existing listing.
+// POST /api/upload/listing-photos?listing_id=<uuid>
 func (h *UploadHandler) HandleUploadListingPhotos(w http.ResponseWriter, r *http.Request) {
 	user := middleware.UserFromContext(r.Context())
 	if user == nil {
@@ -45,8 +43,18 @@ func (h *UploadHandler) HandleUploadListingPhotos(w http.ResponseWriter, r *http
 		return
 	}
 
-	slug := chi.URLParam(r, "slug")
-	listing, err := h.listings.GetBySlug(r.Context(), slug)
+	listingIDStr := r.URL.Query().Get("listing_id")
+	if listingIDStr == "" {
+		respondError(w, http.StatusBadRequest, "listing_id required")
+		return
+	}
+	listingID, err := uuid.Parse(listingIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid listing_id")
+		return
+	}
+
+	listing, err := h.listings.GetByID(r.Context(), listingID)
 	if err != nil {
 		respondError(w, http.StatusNotFound, "listing not found")
 		return
@@ -57,7 +65,6 @@ func (h *UploadHandler) HandleUploadListingPhotos(w http.ResponseWriter, r *http
 		return
 	}
 
-	// 50MB total multipart form limit
 	if err := r.ParseMultipartForm(50 << 20); err != nil {
 		slog.Warn("failed to parse multipart form", "error", err)
 		respondError(w, http.StatusBadRequest, "file too large or invalid form")
@@ -152,7 +159,6 @@ func (h *UploadHandler) HandleUploadAvatar(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// 5MB multipart limit for avatars
 	if err := r.ParseMultipartForm(5 << 20); err != nil {
 		respondError(w, http.StatusBadRequest, "file too large or invalid form")
 		return

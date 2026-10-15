@@ -300,7 +300,7 @@ func securityHeaders(next http.Handler) http.Handler {
 			"default-src 'self'; "+
 				"script-src 'self'; "+
 				"style-src 'self'; "+
-				"img-src 'self' data: https:; "+
+				"img-src 'self' data: blob: https:; "+
 				"font-src 'self'; "+
 				"connect-src 'self'; "+
 				"frame-ancestors 'none'; "+
